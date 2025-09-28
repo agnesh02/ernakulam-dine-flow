@@ -98,15 +98,20 @@ export const TableManagement = () => {
     <div className="space-y-6">
       {/* Status Overview */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {Object.entries(statusSummary).map(([status, count]) => {
-          const config = statusConfig[status as TableStatus];
-          const Icon = config.icon;
-          return (
-            <Card key={status} className="restaurant-card">
-              <div className="flex items-center space-x-3">
-                <div className={`p-2 rounded-lg bg-${config.color} text-white`}>
-                  <Icon className="h-5 w-5" />
-                </div>
+      {Object.entries(statusSummary).map(([status, count]) => {
+        const config = statusConfig[status as TableStatus];
+        const Icon = config.icon;
+        return (
+          <Card key={status} className="restaurant-card">
+            <div className="flex items-center space-x-3">
+              <div className={`p-2 rounded-lg ${
+                status === "available" ? "bg-status-available text-white" :
+                status === "occupied" ? "bg-accent text-accent-foreground" :
+                status === "cleaning" ? "bg-destructive text-destructive-foreground" :
+                "bg-blue-500 text-white"
+              }`}>
+                <Icon className="h-5 w-5" />
+              </div>
                 <div>
                   <p className="text-2xl font-bold">{count}</p>
                   <p className="text-sm text-muted-foreground">{config.label}</p>
@@ -134,7 +139,12 @@ export const TableManagement = () => {
                 <DialogTrigger asChild>
                   <Button
                     variant="outline"
-                    className={`h-24 w-full flex flex-col items-center justify-center space-y-2 ${config.bgClass} hover:opacity-80 transition-all duration-200 hover:scale-105`}
+                    className={`h-24 w-full flex flex-col items-center justify-center space-y-2 transition-all duration-200 hover:scale-105 ${
+                      table.status === "available" ? "bg-status-available text-white hover:opacity-80" :
+                      table.status === "occupied" ? "bg-accent text-accent-foreground hover:opacity-80" :
+                      table.status === "cleaning" ? "bg-destructive text-destructive-foreground hover:opacity-80" :
+                      "bg-blue-500 text-white hover:opacity-80"
+                    }`}
                     onClick={() => setSelectedTable(table)}
                   >
                     <Icon className="h-5 w-5" />
@@ -153,41 +163,43 @@ export const TableManagement = () => {
                   <DialogHeader>
                     <DialogTitle>Table {table.id} - {table.seats} seats</DialogTitle>
                     <DialogDescription>
-                      Current status: <Badge variant="secondary">{config.label}</Badge>
-                      {table.occupiedSince && (
-                        <span className="block mt-2">Occupied since: {table.occupiedSince}</span>
-                      )}
-                      {table.guestCount && (
-                        <span className="block">Guest count: {table.guestCount}</span>
-                      )}
+                      <div className="space-y-2">
+                        <div>Current status: <Badge variant="secondary">{config.label}</Badge></div>
+                        {table.occupiedSince && (
+                          <div>Occupied since: {table.occupiedSince}</div>
+                        )}
+                        {table.guestCount && (
+                          <div>Guest count: {table.guestCount}</div>
+                        )}
+                      </div>
                     </DialogDescription>
                   </DialogHeader>
 
                   <div className="grid grid-cols-2 gap-3 mt-4">
                     <Button
                       onClick={() => updateTableStatus(table.id, "available")}
-                      className="restaurant-table-available"
+                      className="bg-status-available hover:opacity-90 text-white"
                     >
                       <CheckCircle className="h-4 w-4 mr-2" />
                       Available
                     </Button>
                     <Button
                       onClick={() => updateTableStatus(table.id, "occupied")}
-                      className="restaurant-table-occupied"
+                      className="bg-accent hover:opacity-90 text-accent-foreground"
                     >
                       <Users className="h-4 w-4 mr-2" />
                       Seat Guests
                     </Button>
                     <Button
                       onClick={() => updateTableStatus(table.id, "cleaning")}
-                      className="restaurant-table-cleaning"
+                      className="bg-destructive hover:opacity-90 text-destructive-foreground"
                     >
                       <AlertCircle className="h-4 w-4 mr-2" />
                       Needs Cleaning
                     </Button>
                     <Button
                       onClick={() => updateTableStatus(table.id, "reserved")}
-                      className="restaurant-table-reserved"
+                      className="bg-blue-500 hover:opacity-90 text-white"
                     >
                       <Calendar className="h-4 w-4 mr-2" />
                       Reserve

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,7 @@ const categoryIcons = {
 export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: DigitalMenuProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const { toast } = useToast();
 
   const menuItems: MenuItem[] = [
     {
@@ -178,9 +180,20 @@ export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: D
   const placeOrder = () => {
     if (currentOrder.length > 0) {
       setOrderStatus("placed");
+      
+      // Show success toast
+      toast({
+        title: "Order Placed Successfully! 🎉",
+        description: `Your order for ${getTotalItems()} items (₹${getTotalAmount()}) has been sent to the kitchen.`,
+        duration: 4000,
+      });
+      
+      // Show success message and automatically navigate to order status
       // Simulate order progression
       setTimeout(() => setOrderStatus("preparing"), 3000);
       setTimeout(() => setOrderStatus("ready"), 20000);
+      // Scroll to top to see the tabs
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -318,23 +331,37 @@ export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: D
       {/* Floating Order Summary */}
       {currentOrder.length > 0 && (
         <div className="fixed bottom-4 left-4 right-4 z-50">
-          <Card className="restaurant-card bg-primary text-primary-foreground border-primary">
+          <Card className="restaurant-card bg-primary text-primary-foreground border-primary shadow-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-restaurant-white/20 rounded-lg">
                   <ShoppingCart className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="font-semibold">{getTotalItems()} items</p>
-                  <p className="text-sm opacity-90">₹{getTotalAmount()}</p>
+                  <p className="font-semibold">{getTotalItems()} items in cart</p>
+                  <p className="text-sm opacity-90">Total: ₹{getTotalAmount()}</p>
                 </div>
               </div>
-              <Button
-                onClick={placeOrder}
-                className="restaurant-gradient-accent text-white hover:opacity-90"
-              >
-                Place Order
-              </Button>
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-white/30 text-white hover:bg-white/20"
+                  onClick={() => {
+                    // Show cart details - could expand this to show full order summary
+                    const orderItems = currentOrder.map(item => `${item.quantity}x ${item.name}`).join(', ');
+                    alert(`Your order:\n${orderItems}\n\nTotal: ₹${getTotalAmount()}`);
+                  }}
+                >
+                  View Cart
+                </Button>
+                <Button
+                  onClick={placeOrder}
+                  className="restaurant-gradient-accent text-white hover:opacity-90 shadow-orange"
+                >
+                  Place Order →
+                </Button>
+              </div>
             </div>
           </Card>
         </div>

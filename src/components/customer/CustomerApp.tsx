@@ -8,9 +8,14 @@ import { Menu, Clock, CreditCard } from "lucide-react";
 export const CustomerApp = () => {
   const [currentOrder, setCurrentOrder] = useState<any[]>([]);
   const [orderStatus, setOrderStatus] = useState<"none" | "placed" | "preparing" | "ready" | "served">("none");
+  const [activeTab, setActiveTab] = useState("menu");
 
   const updateOrderStatus = (status: "none" | "placed" | "preparing" | "ready" | "served") => {
     setOrderStatus(status);
+    // Auto-switch to order status tab when order is placed
+    if (status === "placed") {
+      setActiveTab("status");
+    }
   };
 
   return (
@@ -20,7 +25,7 @@ export const CustomerApp = () => {
         <p className="text-muted-foreground">Mobile-first PWA for guests at the table</p>
       </div>
 
-      <Tabs defaultValue="menu" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger 
             value="menu" 
@@ -31,10 +36,15 @@ export const CustomerApp = () => {
           </TabsTrigger>
           <TabsTrigger 
             value="status" 
-            className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+            className={`flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground ${
+              orderStatus !== "none" ? "relative" : ""
+            }`}
           >
             <Clock className="h-4 w-4" />
             Order Status
+            {orderStatus !== "none" && (
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full animate-pulse"></div>
+            )}
           </TabsTrigger>
           <TabsTrigger 
             value="payment" 
