@@ -15,7 +15,7 @@ const Index = () => {
             RestaurantOS
           </h1>
           <p className="text-restaurant-white/80 text-sm mt-1">
-            Modern Restaurant Management System
+            A Modern Restaurant Management System
           </p>
         </div>
       </header>
