@@ -13,6 +13,9 @@ export default {
       },
     },
     extend: {
+      screens: {
+        'xs': '475px',
+      },
       fontFamily: {
         'display': 'var(--font-display)',
         'inter': ['Inter', 'sans-serif'],

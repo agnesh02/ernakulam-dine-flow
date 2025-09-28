@@ -263,7 +263,7 @@ export const TableManagement = () => {
           <p className="text-muted-foreground">Click on any table to update its status or seat guests</p>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
           {tables.map((table) => {
             const config = statusConfig[table.status];
             const Icon = config.icon;
@@ -271,7 +271,7 @@ export const TableManagement = () => {
             return (
               <Dialog key={table.id}>
                 <DialogTrigger asChild>
-                  <Card className={`group cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-105 border-2 relative overflow-hidden ${
+                  <Card className={`group cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-105 active:scale-95 touch-manipulation border-2 relative overflow-hidden min-h-[120px] sm:min-h-[140px] ${
                     table.status === "available" 
                       ? "border-green-200 bg-gradient-to-br from-green-50 to-green-100 hover:border-green-400 hover:from-green-100 hover:to-green-200" :
                     table.status === "occupied" 
@@ -289,20 +289,20 @@ export const TableManagement = () => {
                       </div>
                     )}
                     
-                    <div className="p-4 space-y-3">
+                    <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
                       {/* Header with Icon and Status */}
                       <div className="flex items-center justify-between">
-                        <div className={`p-2 rounded-full ${
+                        <div className={`p-1.5 sm:p-2 rounded-full ${
                           table.status === "available" ? "bg-green-100 text-green-600" :
                           table.status === "occupied" ? "bg-orange-100 text-orange-600" :
                           table.status === "cleaning" ? "bg-red-100 text-red-600" :
                           "bg-blue-100 text-blue-600"
                         }`}>
-                          <Icon className="h-4 w-4" />
+                          <Icon className="h-3 w-3 sm:h-4 sm:w-4" />
                         </div>
                         <Badge 
                           variant="secondary" 
-                          className={`text-xs ${
+                          className={`text-xs px-2 py-1 ${
                             table.status === "available" ? "bg-green-100 text-green-700" :
                             table.status === "occupied" ? "bg-orange-100 text-orange-700" :
                             table.status === "cleaning" ? "bg-red-100 text-red-700" :
@@ -315,29 +315,29 @@ export const TableManagement = () => {
 
                       {/* Table ID */}
                       <div className="text-center">
-                        <h3 className="text-lg font-bold text-gray-900">Table {table.id}</h3>
+                        <h3 className="text-base sm:text-lg font-bold text-gray-900">Table {table.id}</h3>
                       </div>
 
                       {/* Seats Information */}
                       <div className="text-center space-y-1">
-                        <div className="text-sm font-medium text-gray-700">
+                        <div className="text-xs sm:text-sm font-medium text-gray-700">
                           {table.isCombined ? `${table.seats} seats (combined)` : `${table.seats} seats`}
                         </div>
                         {table.status === "occupied" && table.availableSeats! > 0 && (
                           <div className="text-xs text-orange-600 font-medium">
-                            {table.availableSeats} seats available
+                            {table.availableSeats} available
                           </div>
                         )}
                         {table.status === "occupied" && table.guestCount && (
                           <div className="text-xs text-gray-500">
-                            {table.guestCount} guests seated
+                            {table.guestCount} guests
                           </div>
                         )}
                       </div>
 
                       {/* Time Information */}
                       {table.occupiedSince && (
-                        <div className="flex items-center justify-center space-x-1 pt-2 border-t border-gray-200">
+                        <div className="flex items-center justify-center space-x-1 pt-1 sm:pt-2 border-t border-gray-200">
                           <Clock className="h-3 w-3 text-gray-500" />
                           <span className="text-xs text-gray-600 font-medium">
                             {table.occupiedSince}
@@ -355,7 +355,7 @@ export const TableManagement = () => {
                   </Card>
                 </DialogTrigger>
 
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-md mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Table {table.id} - {table.seats} seats</DialogTitle>
                     <DialogDescription>
@@ -438,7 +438,7 @@ export const TableManagement = () => {
 
       {/* Seating Dialog */}
       <Dialog open={showSeatingDialog} onOpenChange={setShowSeatingDialog}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Seat Guests</DialogTitle>
             <DialogDescription>

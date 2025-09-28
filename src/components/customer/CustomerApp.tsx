@@ -26,32 +26,35 @@ export const CustomerApp = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6">
+        <TabsList className="grid w-full grid-cols-3 mb-4 sm:mb-6 h-auto">
           <TabsTrigger 
             value="menu" 
-            className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground py-3 px-2 text-xs sm:text-sm touch-manipulation"
           >
             <Menu className="h-4 w-4" />
-            Menu
+            <span className="hidden xs:inline">Menu</span>
+            <span className="xs:hidden">Menu</span>
           </TabsTrigger>
           <TabsTrigger 
             value="status" 
-            className={`flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground ${
+            className={`flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground py-3 px-2 text-xs sm:text-sm touch-manipulation ${
               orderStatus !== "none" ? "relative" : ""
             }`}
           >
             <Clock className="h-4 w-4" />
-            Order Status
+            <span className="hidden xs:inline">Order Status</span>
+            <span className="xs:hidden">Status</span>
             {orderStatus !== "none" && (
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full animate-pulse"></div>
             )}
           </TabsTrigger>
           <TabsTrigger 
             value="payment" 
-            className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground py-3 px-2 text-xs sm:text-sm touch-manipulation"
           >
             <CreditCard className="h-4 w-4" />
-            Bill & Payment
+            <span className="hidden xs:inline">Bill & Payment</span>
+            <span className="xs:hidden">Payment</span>
           </TabsTrigger>
         </TabsList>
 
