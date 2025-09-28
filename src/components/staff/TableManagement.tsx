@@ -139,7 +139,7 @@ export const TableManagement = () => {
                 <DialogTrigger asChild>
                   <Button
                     variant="outline"
-                    className={`h-24 w-full flex flex-col items-center justify-center space-y-2 transition-all duration-200 hover:scale-105 ${
+                    className={`h-24 w-full flex flex-col items-center justify-center space-y-1 transition-all duration-200 hover:scale-105 overflow-hidden ${
                       table.status === "available" ? "bg-status-available text-white hover:opacity-80" :
                       table.status === "occupied" ? "bg-accent text-accent-foreground hover:opacity-80" :
                       table.status === "cleaning" ? "bg-destructive text-destructive-foreground hover:opacity-80" :
@@ -147,13 +147,13 @@ export const TableManagement = () => {
                     }`}
                     onClick={() => setSelectedTable(table)}
                   >
-                    <Icon className="h-5 w-5" />
-                    <span className="font-semibold">T{table.id}</span>
-                    <span className="text-xs">{table.seats} seats</span>
+                    <Icon className="h-4 w-4 flex-shrink-0" />
+                    <span className="font-semibold text-sm leading-tight">T{table.id}</span>
+                    <span className="text-xs leading-tight">{table.seats} seats</span>
                     {table.occupiedSince && (
-                      <span className="text-xs flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {table.occupiedSince}
+                      <span className="text-xs flex items-center gap-1 leading-tight">
+                        <Clock className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate">{table.occupiedSince}</span>
                       </span>
                     )}
                   </Button>

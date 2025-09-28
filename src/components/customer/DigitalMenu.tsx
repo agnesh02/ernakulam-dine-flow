@@ -346,7 +346,7 @@ export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: D
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-white/30 text-white hover:bg-white/20"
+                  className="border-white/30 text-white hover:bg-white/20 bg-white/10 px-4 py-2 h-10 font-medium transition-all duration-300 hover:opacity-90"
                   onClick={() => {
                     // Show cart details - could expand this to show full order summary
                     const orderItems = currentOrder.map(item => `${item.quantity}x ${item.name}`).join(', ');
@@ -357,7 +357,7 @@ export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: D
                 </Button>
                 <Button
                   onClick={placeOrder}
-                  className="restaurant-gradient-accent text-white hover:opacity-90 shadow-orange"
+                  className="restaurant-gradient-accent text-white hover:opacity-90 shadow-orange px-4 py-2 h-10 font-medium transition-all duration-300"
                 >
                   Place Order →
                 </Button>
