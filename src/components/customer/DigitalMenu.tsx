@@ -4,6 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { 
   Search, 
   Plus, 
@@ -14,7 +22,8 @@ import {
   Coffee,
   Salad,
   Dessert,
-  Star
+  Star,
+  X
 } from "lucide-react";
 
 interface MenuItem {
@@ -49,6 +58,7 @@ const categoryIcons = {
 export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: DigitalMenuProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [showCart, setShowCart] = useState(false);
   const { toast } = useToast();
 
   const menuItems: MenuItem[] = [
@@ -343,18 +353,143 @@ export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: D
                 </div>
               </div>
               <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-white/30 text-white hover:bg-white/20 bg-white/10 px-4 py-2 h-10 font-medium transition-all duration-300 hover:opacity-90"
-                  onClick={() => {
-                    // Show cart details - could expand this to show full order summary
-                    const orderItems = currentOrder.map(item => `${item.quantity}x ${item.name}`).join(', ');
-                    alert(`Your order:\n${orderItems}\n\nTotal: ₹${getTotalAmount()}`);
-                  }}
-                >
-                  View Cart
-                </Button>
+                <Dialog open={showCart} onOpenChange={setShowCart}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-white/30 text-white hover:bg-white/20 bg-white/10 px-4 py-2 h-10 font-medium transition-all duration-300 hover:opacity-90"
+                    >
+                      View Cart
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <ShoppingCart className="h-5 w-5" />
+                        Your Order
+                      </DialogTitle>
+                      <DialogDescription>
+                        Review and modify your order before placing it
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                      {currentOrder.length === 0 ? (
+                        <div className="text-center py-8">
+                          <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                          <p className="text-muted-foreground">Your cart is empty</p>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Cart Items */}
+                          <div className="space-y-3">
+                            {currentOrder.map((item) => {
+                              const Icon = categoryIcons[item.category as keyof typeof categoryIcons] || ChefHat;
+                              return (
+                                <Card key={item.id} className="p-4">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-3 flex-1">
+                                      <div className="p-2 bg-restaurant-grey-100 rounded-lg">
+                                        <Icon className="h-4 w-4 text-primary" />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <h4 className="font-medium text-sm truncate">{item.name}</h4>
+                                        <p className="text-xs text-muted-foreground">₹{item.price} each</p>
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="flex items-center space-x-2">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => removeFromOrder(item.id)}
+                                        className="h-6 w-6 p-0"
+                                      >
+                                        <Minus className="h-3 w-3" />
+                                      </Button>
+                                      <span className="font-medium text-sm w-6 text-center">{item.quantity}</span>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => addToOrder(item)}
+                                        className="h-6 w-6 p-0"
+                                      >
+                                        <Plus className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => removeFromOrder(item.id)}
+                                        className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="flex justify-between items-center mt-2 pt-2 border-t">
+                                    <span className="text-xs text-muted-foreground">
+                                      {item.quantity} × ₹{item.price}
+                                    </span>
+                                    <span className="font-bold text-sm">
+                                      ₹{item.price * item.quantity}
+                                    </span>
+                                  </div>
+                                </Card>
+                              );
+                            })}
+                          </div>
+
+                          {/* Order Summary */}
+                          <Card className="p-4 bg-muted">
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-sm">
+                                <span>Items ({getTotalItems()})</span>
+                                <span>₹{getTotalAmount()}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span>Service Charge (5%)</span>
+                                <span>₹{Math.round(getTotalAmount() * 0.05)}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span>GST (18%)</span>
+                                <span>₹{Math.round(getTotalAmount() * 0.18)}</span>
+                              </div>
+                              <div className="border-t pt-2">
+                                <div className="flex justify-between font-bold text-lg">
+                                  <span>Total</span>
+                                  <span>₹{getTotalAmount() + Math.round(getTotalAmount() * 0.23)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </Card>
+
+                          {/* Action Buttons */}
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="outline"
+                              onClick={() => setShowCart(false)}
+                              className="flex-1"
+                            >
+                              Continue Shopping
+                            </Button>
+                            <Button
+                              onClick={() => {
+                                setShowCart(false);
+                                placeOrder();
+                              }}
+                              className="flex-1 restaurant-gradient-accent text-white hover:opacity-90"
+                            >
+                              Place Order
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                
                 <Button
                   onClick={placeOrder}
                   className="restaurant-gradient-accent text-white hover:opacity-90 shadow-orange px-4 py-2 h-10 font-medium transition-all duration-300"
