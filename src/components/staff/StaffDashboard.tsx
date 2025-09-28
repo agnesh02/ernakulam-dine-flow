@@ -21,34 +21,38 @@ export const StaffDashboard = () => {
       </div>
 
       <Tabs defaultValue="tables" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-6">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-4 sm:mb-6 h-auto">
           <TabsTrigger 
             value="tables" 
-            className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground py-3 px-2 text-xs sm:text-sm touch-manipulation"
           >
             <LayoutGrid className="h-4 w-4" />
-            Tables
+            <span className="hidden xs:inline">Tables</span>
+            <span className="xs:hidden">Tables</span>
           </TabsTrigger>
           <TabsTrigger 
             value="orders" 
-            className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground py-3 px-2 text-xs sm:text-sm touch-manipulation"
           >
             <ClipboardList className="h-4 w-4" />
-            Orders
+            <span className="hidden xs:inline">Orders</span>
+            <span className="xs:hidden">Orders</span>
           </TabsTrigger>
           <TabsTrigger 
             value="menu" 
-            className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground py-3 px-2 text-xs sm:text-sm touch-manipulation"
           >
             <Menu className="h-4 w-4" />
-            Menu
+            <span className="hidden xs:inline">Menu</span>
+            <span className="xs:hidden">Menu</span>
           </TabsTrigger>
           <TabsTrigger 
             value="settings" 
-            className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground py-3 px-2 text-xs sm:text-sm touch-manipulation"
           >
             <Settings className="h-4 w-4" />
-            Settings
+            <span className="hidden xs:inline">Settings</span>
+            <span className="xs:hidden">Settings</span>
           </TabsTrigger>
         </TabsList>
 

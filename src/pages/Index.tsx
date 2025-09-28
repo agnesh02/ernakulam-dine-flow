@@ -21,23 +21,25 @@ const Index = () => {
       </header>
 
       {/* Main Content */}
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto p-4 sm:p-6">
         <Card className="restaurant-card">
           <Tabs defaultValue="staff" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsList className="grid w-full grid-cols-2 mb-4 sm:mb-6 h-auto">
               <TabsTrigger 
                 value="staff" 
-                className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+                className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground py-3 px-2 text-xs sm:text-sm touch-manipulation"
               >
                 <Settings className="h-4 w-4" />
-                Staff Interface
+                <span className="hidden xs:inline">Staff Interface</span>
+                <span className="xs:hidden">Staff</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="customer" 
-                className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+                className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground py-3 px-2 text-xs sm:text-sm touch-manipulation"
               >
                 <Users className="h-4 w-4" />
-                Customer Interface
+                <span className="hidden xs:inline">Customer Interface</span>
+                <span className="xs:hidden">Customer</span>
               </TabsTrigger>
             </TabsList>
             

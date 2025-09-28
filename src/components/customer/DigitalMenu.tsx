@@ -236,7 +236,7 @@ export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: D
               variant={selectedCategory === "all" ? "default" : "outline"}
               size="sm"
               onClick={() => setSelectedCategory("all")}
-              className={selectedCategory === "all" ? "restaurant-button-accent" : ""}
+              className={`text-xs sm:text-sm px-3 py-2 h-auto min-h-[36px] touch-manipulation ${selectedCategory === "all" ? "restaurant-button-accent" : ""}`}
             >
               All
             </Button>
@@ -248,10 +248,11 @@ export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: D
                   variant={selectedCategory === category ? "default" : "outline"}
                   size="sm"
                   onClick={() => setSelectedCategory(category)}
-                  className={`flex items-center gap-2 ${selectedCategory === category ? "restaurant-button-accent" : ""}`}
+                  className={`flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-3 py-2 h-auto min-h-[36px] touch-manipulation ${selectedCategory === category ? "restaurant-button-accent" : ""}`}
                 >
-                  <Icon className="h-4 w-4" />
-                  {category.charAt(0).toUpperCase() + category.slice(1)}
+                  <Icon className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden xs:inline">{category.charAt(0).toUpperCase() + category.slice(1)}</span>
+                  <span className="xs:hidden">{category.charAt(0).toUpperCase() + category.slice(1, 3)}</span>
                 </Button>
               );
             })}
@@ -260,36 +261,36 @@ export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: D
       </Card>
 
       {/* Menu Items */}
-      <div className="grid gap-4">
+      <div className="grid gap-3 sm:gap-4">
         {filteredItems.map((item) => {
           const Icon = categoryIcons[item.category as keyof typeof categoryIcons] || ChefHat;
           const quantity = getItemQuantity(item.id);
           
           return (
             <Card key={item.id} className="restaurant-card">
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {/* Item Header */}
                 <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-3 bg-restaurant-grey-100 rounded-lg">
-                      <Icon className="h-6 w-6 text-primary" />
+                  <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+                    <div className="p-2 sm:p-3 bg-restaurant-grey-100 rounded-lg flex-shrink-0">
+                      <Icon className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2 mb-1">
-                        <h3 className="font-semibold text-lg">{item.name}</h3>
-                        <div className="flex items-center space-x-1">
-                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                          <span className="text-sm font-medium">{item.rating}</span>
+                        <h3 className="font-semibold text-base sm:text-lg truncate">{item.name}</h3>
+                        <div className="flex items-center space-x-1 flex-shrink-0">
+                          <Star className="h-3 w-3 sm:h-4 sm:w-4 fill-yellow-400 text-yellow-400" />
+                          <span className="text-xs sm:text-sm font-medium">{item.rating}</span>
                         </div>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-2">{item.description}</p>
-                      <div className="flex items-center space-x-4">
-                        <span className="font-bold text-lg text-primary">₹{item.price}</span>
+                      <p className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-2">{item.description}</p>
+                      <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4">
+                        <span className="font-bold text-base sm:text-lg text-primary">₹{item.price}</span>
                         <div className="flex items-center space-x-1 text-muted-foreground">
-                          <Clock className="h-4 w-4" />
-                          <span className="text-sm">{item.prepTime} min</span>
+                          <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="text-xs sm:text-sm">{item.prepTime} min</span>
                         </div>
-                        <Badge variant="outline" className="capitalize">
+                        <Badge variant="outline" className="capitalize text-xs w-fit">
                           {item.category}
                         </Badge>
                       </div>
@@ -302,31 +303,31 @@ export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: D
                   {quantity === 0 ? (
                     <Button
                       onClick={() => addToOrder(item)}
-                      className="restaurant-button-accent flex-1"
+                      className="restaurant-button-accent flex-1 h-10 sm:h-11 text-sm sm:text-base touch-manipulation"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Add to Order
                     </Button>
                   ) : (
-                    <div className="flex items-center space-x-3 flex-1">
+                    <div className="flex items-center space-x-2 sm:space-x-3 flex-1">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => removeFromOrder(item.id)}
-                        className="h-8 w-8 p-0"
+                        className="h-8 w-8 sm:h-9 sm:w-9 p-0 touch-manipulation"
                       >
                         <Minus className="h-4 w-4" />
                       </Button>
-                      <span className="font-medium text-lg">{quantity}</span>
+                      <span className="font-medium text-base sm:text-lg min-w-[2rem] text-center">{quantity}</span>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => addToOrder(item)}
-                        className="h-8 w-8 p-0"
+                        className="h-8 w-8 sm:h-9 sm:w-9 p-0 touch-manipulation"
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
-                      <span className="ml-auto font-bold text-primary">
+                      <span className="ml-auto font-bold text-primary text-sm sm:text-base">
                         ₹{item.price * quantity}
                       </span>
                     </div>
@@ -343,27 +344,28 @@ export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: D
         <div className="fixed bottom-4 left-4 right-4 z-50">
           <Card className="restaurant-card bg-primary text-primary-foreground border-primary shadow-lg">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-restaurant-white/20 rounded-lg">
-                  <ShoppingCart className="h-5 w-5" />
+              <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+                <div className="p-2 bg-restaurant-white/20 rounded-lg flex-shrink-0">
+                  <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
-                <div>
-                  <p className="font-semibold">{getTotalItems()} items in cart</p>
-                  <p className="text-sm opacity-90">Total: ₹{getTotalAmount()}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-sm sm:text-base">{getTotalItems()} items in cart</p>
+                  <p className="text-xs sm:text-sm opacity-90">Total: ₹{getTotalAmount()}</p>
                 </div>
               </div>
-              <div className="flex space-x-2">
+              <div className="flex space-x-2 flex-shrink-0">
                 <Dialog open={showCart} onOpenChange={setShowCart}>
                   <DialogTrigger asChild>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="border-white/30 text-white hover:bg-white/20 bg-white/10 px-4 py-2 h-10 font-medium transition-all duration-300 hover:opacity-90"
+                      className="border-white/30 text-white hover:bg-white/20 bg-white/10 px-3 sm:px-4 py-2 h-9 sm:h-10 font-medium transition-all duration-300 hover:opacity-90 text-xs sm:text-sm touch-manipulation"
                     >
-                      View Cart
+                      <span className="hidden xs:inline">View Cart</span>
+                      <span className="xs:hidden">Cart</span>
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+                  <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
                     <DialogHeader>
                       <DialogTitle className="flex items-center gap-2">
                         <ShoppingCart className="h-5 w-5" />
