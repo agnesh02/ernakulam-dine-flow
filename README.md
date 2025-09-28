@@ -4,7 +4,7 @@ A modern restaurant management system with digital menu and table management cap
 
 ## 🚀 Live Demo
 
-**GitHub Pages**: [https://agnesh02backup.github.io/ernakulam-dine-flow/](https://agnesh02backup.github.io/ernakulam-dine-flow/)
+**GitHub Pages**: [https://agnesh02backup.github.io/ernakulam-dine-flow/](https://agnesh02backup.github.io/ernakulam-dine-flow/) ✅ **Live & Working**
 
 ## 📋 Features
 
@@ -71,27 +71,34 @@ npm run lint
 
 ## 🌐 Deployment
 
-This project is automatically deployed to GitHub Pages using GitHub Actions.
+This project is automatically deployed to GitHub Pages using GitHub Actions. ✅ **Currently Live & Working**
 
-### Manual Deployment
+### Automatic Deployment
 
-1. **Build the project**:
+Every push to the `main` branch triggers:
+1. **Build Process**: Installs dependencies and builds the React app
+2. **Deployment**: Automatically deploys to GitHub Pages
+3. **Live Site**: Updates at [https://agnesh02backup.github.io/ernakulam-dine-flow/](https://agnesh02backup.github.io/ernakulam-dine-flow/)
+
+### Manual Deployment (if needed)
+
+1. **Build the project locally**:
    ```bash
    npm run build
    ```
 
-2. **Deploy to GitHub Pages**:
-   - Go to repository Settings
-   - Navigate to Pages section
-   - Select "GitHub Actions" as source
-   - The workflow will automatically deploy on push to main branch
+2. **GitHub Pages Settings**:
+   - Repository Settings → Pages
+   - Source: "Deploy from a branch"
+   - Branch: `gh-pages` / `/ (root)`
 
-### Custom Domain
+### Workflow Details
 
-To use a custom domain:
-1. Add your domain to the repository settings
-2. Update the `base` path in `vite.config.ts` if needed
-3. Configure DNS settings as per GitHub Pages requirements
+The deployment uses:
+- **GitHub Actions**: `.github/workflows/deploy.yml`
+- **Build Tool**: Vite
+- **Deploy Action**: `peaceiris/actions-gh-pages@v3`
+- **Permissions**: `contents: write` for branch creation
 
 ## 📱 Responsive Design
 
