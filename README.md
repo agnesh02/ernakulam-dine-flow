@@ -1,73 +1,132 @@
-# Welcome to your Lovable project
+# Ernakulam Dine Flow 🍽️
 
-## Project info
+A modern restaurant management system with digital menu and table management capabilities.
 
-**URL**: https://lovable.dev/projects/2c645c3e-9a48-47bf-abd7-e9d3179b17ce
+## 🚀 Live Demo
 
-## How can I edit this code?
+**GitHub Pages**: [https://agnesh02backup.github.io/ernakulam-dine-flow/](https://agnesh02backup.github.io/ernakulam-dine-flow/)
 
-There are several ways of editing your application.
+## 📋 Features
 
-**Use Lovable**
+### Customer Interface
+- **Digital Menu**: Browse food items with categories, ratings, and descriptions
+- **Smart Cart**: Add/remove items with quantity controls
+- **Order Management**: View cart, modify quantities, and place orders
+- **Order Tracking**: Real-time order status updates
+- **Bill & Payment**: Complete payment interface
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/2c645c3e-9a48-47bf-abd7-e9d3179b17ce) and start prompting.
+### Staff Interface
+- **Table Management**: Visual floor plan with table status tracking
+- **Smart Seating**: Flexible seating options and table combinations
+- **Guest Management**: Seat guests with flexible capacity options
+- **Status Updates**: Real-time table status changes (Available, Occupied, Cleaning, Reserved)
+- **Large Group Support**: Combine tables for groups of 6+ people
 
-Changes made via Lovable will be committed automatically to this repo.
+## 🛠️ Tech Stack
 
-**Use your preferred IDE**
+- **Frontend**: React 18 + TypeScript
+- **Build Tool**: Vite
+- **UI Components**: shadcn/ui + Radix UI
+- **Styling**: Tailwind CSS
+- **Icons**: Lucide React
+- **State Management**: React Hooks
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 🚀 Getting Started
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Prerequisites
+- Node.js 18+ 
+- npm or yarn
 
-Follow these steps:
+### Installation
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+```bash
+# Clone the repository
+git clone https://github.com/agnesh02backup/ernakulam-dine-flow.git
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Navigate to project directory
+cd ernakulam-dine-flow
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Install dependencies
+npm install
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Available Scripts
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+# Development server
+npm run dev
 
-**Use GitHub Codespaces**
+# Build for production
+npm run build
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+# Preview production build
+npm run preview
 
-## What technologies are used for this project?
+# Lint code
+npm run lint
+```
 
-This project is built with:
+## 🌐 Deployment
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+This project is automatically deployed to GitHub Pages using GitHub Actions.
 
-## How can I deploy this project?
+### Manual Deployment
 
-Simply open [Lovable](https://lovable.dev/projects/2c645c3e-9a48-47bf-abd7-e9d3179b17ce) and click on Share -> Publish.
+1. **Build the project**:
+   ```bash
+   npm run build
+   ```
 
-## Can I connect a custom domain to my Lovable project?
+2. **Deploy to GitHub Pages**:
+   - Go to repository Settings
+   - Navigate to Pages section
+   - Select "GitHub Actions" as source
+   - The workflow will automatically deploy on push to main branch
 
-Yes, you can!
+### Custom Domain
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+To use a custom domain:
+1. Add your domain to the repository settings
+2. Update the `base` path in `vite.config.ts` if needed
+3. Configure DNS settings as per GitHub Pages requirements
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## 📱 Responsive Design
+
+The application is fully responsive and works on:
+- 📱 Mobile devices (320px+)
+- 📱 Tablets (768px+)
+- 💻 Desktop (1024px+)
+- 🖥️ Large screens (1440px+)
+
+## 🎨 Design System
+
+- **Color Scheme**: Professional teal and orange theme
+- **Typography**: Inter font family
+- **Components**: Consistent shadcn/ui components
+- **Animations**: Smooth transitions and hover effects
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is open source and available under the [MIT License](LICENSE).
+
+## 👨‍💻 Author
+
+**Agnesh Kumar**
+- GitHub: [@agnesh02backup](https://github.com/agnesh02backup)
+
+## 🙏 Acknowledgments
+
+- Built with [Lovable](https://lovable.dev)
+- UI components from [shadcn/ui](https://ui.shadcn.com)
+- Icons from [Lucide](https://lucide.dev)
