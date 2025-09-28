@@ -1,11 +1,55 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card } from "@/components/ui/card";
+import { StaffDashboard } from "@/components/staff/StaffDashboard";
+import { CustomerApp } from "@/components/customer/CustomerApp";
+import { Settings, Users } from "lucide-react";
 
 const Index = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <div className="min-h-screen bg-restaurant-grey-50">
+      {/* Header */}
+      <header className="restaurant-gradient-bg px-6 py-4 shadow-lg">
+        <div className="container mx-auto">
+          <h1 className="text-2xl font-bold text-restaurant-white font-display">
+            RestaurantOS
+          </h1>
+          <p className="text-restaurant-white/80 text-sm mt-1">
+            Modern Restaurant Management System
+          </p>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="container mx-auto p-6">
+        <Card className="restaurant-card">
+          <Tabs defaultValue="staff" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger 
+                value="staff" 
+                className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+              >
+                <Settings className="h-4 w-4" />
+                Staff Interface
+              </TabsTrigger>
+              <TabsTrigger 
+                value="customer" 
+                className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+              >
+                <Users className="h-4 w-4" />
+                Customer Interface
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="staff" className="space-y-6">
+              <StaffDashboard />
+            </TabsContent>
+            
+            <TabsContent value="customer" className="space-y-6">
+              <CustomerApp />
+            </TabsContent>
+          </Tabs>
+        </Card>
       </div>
     </div>
   );

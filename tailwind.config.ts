@@ -13,6 +13,10 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        'display': 'var(--font-display)',
+        'inter': ['Inter', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -47,6 +51,29 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Restaurant specific colors
+        restaurant: {
+          teal: "hsl(var(--restaurant-teal))",
+          "teal-light": "hsl(var(--restaurant-teal-light))",
+          "teal-dark": "hsl(var(--restaurant-teal-dark))",
+          orange: "hsl(var(--restaurant-orange))",
+          "orange-light": "hsl(var(--restaurant-orange-light))",
+          "orange-dark": "hsl(var(--restaurant-orange-dark))",
+          white: "hsl(var(--restaurant-white))",
+          "grey-50": "hsl(var(--restaurant-grey-50))",
+          "grey-100": "hsl(var(--restaurant-grey-100))",
+          "grey-200": "hsl(var(--restaurant-grey-200))",
+          "grey-300": "hsl(var(--restaurant-grey-300))",
+          "grey-500": "hsl(var(--restaurant-grey-500))",
+          "grey-700": "hsl(var(--restaurant-grey-700))",
+          "grey-900": "hsl(var(--restaurant-grey-900))",
+        },
+        status: {
+          available: "hsl(var(--status-available))",
+          occupied: "hsl(var(--status-occupied))",
+          cleaning: "hsl(var(--status-cleaning))",
+          reserved: "hsl(var(--status-reserved))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -57,6 +84,9 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+      },
+      boxShadow: {
+        'orange': 'var(--shadow-orange)',
       },
       borderRadius: {
         lg: "var(--radius)",
