@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import { orderAPI } from "@/lib/api";
 import { 
   CreditCard, 
   Smartphone, 
@@ -14,46 +16,72 @@ import {
 } from "lucide-react";
 
 interface BillPaymentProps {
-  currentOrder: any[];
-  orderStatus: string;
+  currentOrder: any;
+  orderId: string | null;
 }
 
-export const BillPayment = ({ currentOrder, orderStatus }: BillPaymentProps) => {
+export const BillPayment = ({ currentOrder, orderId }: BillPaymentProps) => {
   const [paymentMethod, setPaymentMethod] = useState<"upi" | "card" | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<"pending" | "processing" | "completed" | "failed">("pending");
+  const { toast } = useToast();
 
-  const subtotal = currentOrder.reduce((total, item) => total + (item.price * item.quantity), 0);
-  const gst = Math.round(subtotal * 0.18); // 18% GST
-  const serviceCharge = Math.round(subtotal * 0.05); // 5% service charge
-  const total = subtotal + gst + serviceCharge;
+  const processPayment = async (method: "upi" | "card") => {
+    if (!orderId) {
+      toast({
+        title: "Error",
+        description: "No order ID found. Please place an order first.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-  const processPayment = (method: "upi" | "card") => {
     setPaymentMethod(method);
     setPaymentStatus("processing");
     
-    // Simulate payment processing
-    setTimeout(() => {
+    try {
+      // Simulate payment processing delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Mark order as paid via API
+      await orderAPI.markPaid(orderId, method);
+      
       setPaymentStatus("completed");
-    }, 3000);
+      toast({
+        title: "Payment Successful!",
+        description: `Your payment of ₹${currentOrder.grandTotal} has been processed.`,
+      });
+    } catch (error: any) {
+      setPaymentStatus("failed");
+      toast({
+        title: "Payment Failed",
+        description: error.message || "Payment could not be processed. Please try again.",
+        variant: "destructive",
+      });
+      // Reset after showing error
+      setTimeout(() => {
+        setPaymentStatus("pending");
+        setPaymentMethod(null);
+      }, 3000);
+    }
   };
 
-  if (currentOrder.length === 0) {
+  if (!currentOrder) {
     return (
       <Card className="restaurant-card text-center py-12">
         <Receipt className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-        <h3 className="text-lg font-semibold mb-2">No Order to Pay</h3>
-        <p className="text-muted-foreground">Add items to your order to view the bill here</p>
+        <h3 className="text-lg font-semibold mb-2">No Order Found</h3>
+        <p className="text-muted-foreground">Place an order to view the bill here</p>
       </Card>
     );
   }
 
-  if (paymentStatus === "completed") {
+  if (paymentStatus === "completed" || currentOrder.paymentStatus === "paid") {
     return (
       <Card className="restaurant-card text-center py-12">
         <CheckCircle className="h-16 w-16 text-status-available mx-auto mb-4" />
         <h3 className="text-lg font-semibold mb-2 text-status-available">Payment Successful!</h3>
         <p className="text-muted-foreground mb-4">
-          Thank you for dining with us. Your payment of ₹{total} has been processed.
+          Thank you for dining with us. Your payment of ₹{currentOrder.grandTotal} has been processed.
         </p>
         <Badge className="bg-status-available text-white">
           Transaction Complete
@@ -88,11 +116,11 @@ export const BillPayment = ({ currentOrder, orderStatus }: BillPaymentProps) => 
 
           {/* Itemized Bill */}
           <div className="space-y-3">
-            {currentOrder.map((item) => (
+            {currentOrder.orderItems.map((item: any) => (
               <div key={item.id} className="flex justify-between items-center">
                 <div className="flex-1">
                   <div className="flex items-center space-x-2">
-                    <span className="font-medium">{item.name}</span>
+                    <span className="font-medium">{item.menuItem.name}</span>
                     <span className="text-sm text-muted-foreground">x{item.quantity}</span>
                   </div>
                   <p className="text-sm text-muted-foreground">₹{item.price} each</p>
@@ -108,21 +136,21 @@ export const BillPayment = ({ currentOrder, orderStatus }: BillPaymentProps) => 
           <div className="space-y-2">
             <div className="flex justify-between">
               <span>Subtotal</span>
-              <span>₹{subtotal}</span>
+              <span>₹{currentOrder.totalAmount}</span>
             </div>
             <div className="flex justify-between text-sm text-muted-foreground">
               <div className="flex items-center space-x-1">
                 <Percent className="h-3 w-3" />
                 <span>GST (18%)</span>
               </div>
-              <span>₹{gst}</span>
+              <span>₹{currentOrder.gst}</span>
             </div>
             <div className="flex justify-between text-sm text-muted-foreground">
               <div className="flex items-center space-x-1">
                 <DollarSign className="h-3 w-3" />
                 <span>Service Charge (5%)</span>
               </div>
-              <span>₹{serviceCharge}</span>
+              <span>₹{currentOrder.serviceCharge}</span>
             </div>
           </div>
 
@@ -130,7 +158,7 @@ export const BillPayment = ({ currentOrder, orderStatus }: BillPaymentProps) => 
 
           <div className="flex justify-between text-lg font-bold">
             <span>Total Amount</span>
-            <span className="text-primary">₹{total}</span>
+            <span className="text-primary">₹{currentOrder.grandTotal}</span>
           </div>
         </div>
       </Card>
@@ -140,7 +168,7 @@ export const BillPayment = ({ currentOrder, orderStatus }: BillPaymentProps) => 
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Choose Payment Method</h3>
           
-          {orderStatus !== "served" && (
+          {currentOrder.status !== "served" && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-center space-x-2">
                 <AlertCircle className="h-5 w-5 text-blue-600" />
@@ -156,10 +184,10 @@ export const BillPayment = ({ currentOrder, orderStatus }: BillPaymentProps) => 
             <Button
               variant="outline"
               className={`p-6 h-auto justify-start space-x-4 hover:bg-restaurant-grey-50 ${
-                orderStatus !== "served" ? "opacity-50 cursor-not-allowed" : ""
+                currentOrder.status !== "served" ? "opacity-50 cursor-not-allowed" : ""
               }`}
               onClick={() => processPayment("upi")}
-              disabled={orderStatus !== "served"}
+              disabled={currentOrder.status !== "served"}
             >
               <div className="p-3 bg-green-100 rounded-lg">
                 <Smartphone className="h-6 w-6 text-green-600" />
@@ -181,10 +209,10 @@ export const BillPayment = ({ currentOrder, orderStatus }: BillPaymentProps) => 
             <Button
               variant="outline"
               className={`p-6 h-auto justify-start space-x-4 hover:bg-restaurant-grey-50 ${
-                orderStatus !== "served" ? "opacity-50 cursor-not-allowed" : ""
+                currentOrder.status !== "served" ? "opacity-50 cursor-not-allowed" : ""
               }`}
               onClick={() => processPayment("card")}
-              disabled={orderStatus !== "served"}
+              disabled={currentOrder.status !== "served"}
             >
               <div className="p-3 bg-blue-100 rounded-lg">
                 <CreditCard className="h-6 w-6 text-blue-600" />

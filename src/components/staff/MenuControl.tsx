@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, ChefHat, Coffee, Salad, Dessert, Clock } from "lucide-react";
+import { menuAPI } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface MenuItem {
   id: string;
@@ -26,90 +28,67 @@ const categoryIcons = {
 export const MenuControl = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([
-    {
-      id: "1",
-      name: "Chicken Biryani",
-      category: "mains",
-      price: 299,
-      isAvailable: true,
-      prepTime: 25,
-      description: "Aromatic basmati rice with tender chicken pieces",
-    },
-    {
-      id: "2", 
-      name: "Masala Dosa",
-      category: "mains",
-      price: 149,
-      isAvailable: true,
-      prepTime: 15,
-      description: "Crispy crepe with spiced potato filling",
-    },
-    {
-      id: "3",
-      name: "Fish Curry",
-      category: "mains", 
-      price: 249,
-      isAvailable: false,
-      prepTime: 20,
-      description: "Traditional Kerala fish curry with coconut",
-    },
-    {
-      id: "4",
-      name: "Filter Coffee",
-      category: "beverages",
-      price: 45,
-      isAvailable: true,
-      prepTime: 5,
-      description: "Traditional South Indian filter coffee",
-    },
-    {
-      id: "5",
-      name: "Lassi",
-      category: "beverages",
-      price: 65,
-      isAvailable: true,
-      prepTime: 3,
-      description: "Refreshing yogurt-based drink",
-    },
-    {
-      id: "6",
-      name: "Samosa",
-      category: "appetizers",
-      price: 89,
-      isAvailable: true,
-      prepTime: 10,
-      description: "Crispy fried pastry with savory filling",
-    },
-    {
-      id: "7",
-      name: "Gulab Jamun", 
-      category: "desserts",
-      price: 79,
-      isAvailable: false,
-      prepTime: 8,
-      description: "Sweet milk dumplings in sugar syrup",
-    },
-    {
-      id: "8",
-      name: "Tandoori Chicken",
-      category: "mains",
-      price: 349,
-      isAvailable: true,
-      prepTime: 30,
-      description: "Marinated chicken grilled in tandoor",
-    },
-  ]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
-  const toggleItemAvailability = (itemId: string) => {
+  // Fetch menu items on mount
+  useEffect(() => {
+    fetchMenuItems();
+  }, []);
+
+  const fetchMenuItems = async () => {
+    try {
+      setIsLoading(true);
+      const items = await menuAPI.getAll();
+      setMenuItems(items);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to fetch menu items",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const toggleItemAvailability = async (itemId: string) => {
+    const item = menuItems.find(i => i.id === itemId);
+    if (!item) return;
+
+    const newAvailability = !item.isAvailable;
+    
+    // Optimistic update
     setMenuItems(items =>
-      items.map(item =>
-        item.id === itemId
-          ? { ...item, isAvailable: !item.isAvailable }
-          : item
+      items.map(i =>
+        i.id === itemId
+          ? { ...i, isAvailable: newAvailability }
+          : i
       )
     );
+
+    try {
+      await menuAPI.updateAvailability(itemId, newAvailability);
+      toast({
+        title: "Success",
+        description: `${item.name} is now ${newAvailability ? 'available' : 'unavailable'}`,
+      });
+    } catch (error: any) {
+      // Revert on error
+      setMenuItems(items =>
+        items.map(i =>
+          i.id === itemId
+            ? { ...i, isAvailable: !newAvailability }
+            : i
+        )
+      );
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update menu item",
+        variant: "destructive",
+      });
+    }
   };
 
   const filteredItems = menuItems.filter(item => {
@@ -127,6 +106,16 @@ export const MenuControl = () => {
 
   const stats = getAvailabilityStats();
   const categories = Array.from(new Set(menuItems.map(item => item.category)));
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Card className="restaurant-card text-center py-12">
+          <p className="text-muted-foreground">Loading menu items...</p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

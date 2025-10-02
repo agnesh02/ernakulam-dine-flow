@@ -1,0 +1,65 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Staff {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  pin       String   // hashed PIN for authentication
+  role      String   @default("staff") // staff, manager, admin
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MenuItem {
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  category    String
+  price       Int
+  description String
+  prepTime    Int
+  rating      Float       @default(4.0)
+  isAvailable Boolean     @default(true)
+  image       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  orderItems  OrderItem[]
+}
+
+model Order {
+  id             String      @id @default(auto()) @map("_id") @db.ObjectId
+  orderNumber    String      @unique
+  status         String      @default("pending") // pending, paid, preparing, ready, served, cancelled
+  totalAmount    Int
+  serviceCharge  Int
+  gst            Int
+  grandTotal     Int
+  paymentStatus  String      @default("unpaid") // unpaid, paid
+  paymentMethod  String?
+  customerEmail  String?
+  customerPhone  String?
+  orderItems     OrderItem[]
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+}
+
+model OrderItem {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  orderId    String   @db.ObjectId
+  menuItemId String   @db.ObjectId
+  quantity   Int
+  price      Int
+  notes      String?
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+  createdAt  DateTime @default(now())
+}
+

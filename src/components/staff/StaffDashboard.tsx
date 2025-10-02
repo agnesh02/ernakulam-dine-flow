@@ -20,16 +20,17 @@ export const StaffDashboard = () => {
         <p className="text-muted-foreground">Restaurant command center for efficient operations</p>
       </div>
 
-      <Tabs defaultValue="tables" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-4 sm:mb-6 h-auto">
-          <TabsTrigger 
+      <Tabs defaultValue="orders" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 mb-4 sm:mb-6 h-auto">
+          {/* TABLE MANAGEMENT TEMPORARILY DISABLED */}
+          {/* <TabsTrigger 
             value="tables" 
             className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground py-3 px-2 text-xs sm:text-sm touch-manipulation"
           >
             <LayoutGrid className="h-4 w-4" />
             <span className="hidden xs:inline">Tables</span>
             <span className="xs:hidden">Tables</span>
-          </TabsTrigger>
+          </TabsTrigger> */}
           <TabsTrigger 
             value="orders" 
             className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground py-3 px-2 text-xs sm:text-sm touch-manipulation"
@@ -56,9 +57,10 @@ export const StaffDashboard = () => {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="tables">
+        {/* TABLE MANAGEMENT TEMPORARILY DISABLED */}
+        {/* <TabsContent value="tables">
           <TableManagement />
-        </TabsContent>
+        </TabsContent> */}
 
         <TabsContent value="orders">
           <OrderManagement />

@@ -1,17 +1,26 @@
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Clock, ChefHat, Utensils, AlertCircle } from "lucide-react";
+import { CheckCircle, Clock, ChefHat, Utensils, AlertCircle, Loader2 } from "lucide-react";
+import { getSocket, joinCustomerRoom, onOrderStatusUpdate } from "@/lib/socket";
+import { orderAPI } from "@/lib/api";
 
 interface OrderStatusProps {
-  orderStatus: string;
-  currentOrder: any[];
+  currentOrder: any;
+  orderId: string | null;
 }
 
 const statusSteps = [
   {
-    id: "placed",
+    id: "pending",
     label: "Order Placed",
     description: "Your order has been received",
+    icon: CheckCircle,
+  },
+  {
+    id: "paid",
+    label: "Payment Confirmed",
+    description: "Payment confirmed, sending to kitchen",
     icon: CheckCircle,
   },
   {
@@ -34,10 +43,28 @@ const statusSteps = [
   },
 ];
 
-export const OrderStatus = ({ orderStatus, currentOrder }: OrderStatusProps) => {
+export const OrderStatus = ({ currentOrder, orderId }: OrderStatusProps) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Set up Socket.io connection for real-time updates
+  useEffect(() => {
+    if (orderId) {
+      const socket = getSocket();
+      joinCustomerRoom(orderId);
+
+      // Listen for order status updates
+      onOrderStatusUpdate((data) => {
+        console.log('Order status updated:', data);
+        // The parent component will handle the actual status update
+      });
+    }
+  }, [orderId]);
+
   const getStepStatus = (stepId: string) => {
+    if (!currentOrder) return "pending";
+    
     const stepIndex = statusSteps.findIndex(step => step.id === stepId);
-    const currentIndex = statusSteps.findIndex(step => step.id === orderStatus);
+    const currentIndex = statusSteps.findIndex(step => step.id === currentOrder.status);
     
     if (currentIndex === -1) return "pending";
     if (stepIndex < currentIndex) return "completed";
@@ -45,18 +72,44 @@ export const OrderStatus = ({ orderStatus, currentOrder }: OrderStatusProps) => 
     return "pending";
   };
 
-  const getTotalAmount = () => {
-    return currentOrder.reduce((total, item) => total + (item.price * item.quantity), 0);
-  };
-
   const getEstimatedTime = () => {
-    if (orderStatus === "placed") return "2-3 minutes";
-    if (orderStatus === "preparing") return "15-20 minutes";
-    if (orderStatus === "ready") return "Now serving";
+    if (!currentOrder) return "-";
+    
+    if (currentOrder.status === "pending" || currentOrder.status === "paid") {
+      return "2-3 minutes";
+    }
+    if (currentOrder.status === "preparing") {
+      // Calculate based on items
+      const avgPrepTime = currentOrder.orderItems.reduce((total: number, item: any) => 
+        total + item.menuItem.prepTime, 0
+      ) / currentOrder.orderItems.length;
+      return `${Math.ceil(avgPrepTime)}-${Math.ceil(avgPrepTime + 5)} minutes`;
+    }
+    if (currentOrder.status === "ready") return "Now serving";
     return "Completed";
   };
 
-  if (orderStatus === "none") {
+  if (isLoading) {
+    return (
+      <Card className="restaurant-card text-center py-12">
+        <Loader2 className="h-16 w-16 text-muted-foreground mx-auto mb-4 animate-spin" />
+        <h3 className="text-lg font-semibold mb-2">Loading Order...</h3>
+        <p className="text-muted-foreground">Fetching your order details</p>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="restaurant-card text-center py-12">
+        <AlertCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
+        <h3 className="text-lg font-semibold mb-2">Error Loading Order</h3>
+        <p className="text-muted-foreground">{error}</p>
+      </Card>
+    );
+  }
+
+  if (!currentOrder) {
     return (
       <Card className="restaurant-card text-center py-12">
         <AlertCircle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
@@ -72,31 +125,52 @@ export const OrderStatus = ({ orderStatus, currentOrder }: OrderStatusProps) => 
       <Card className="restaurant-card">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Your Order</h3>
+            <div>
+              <h3 className="text-lg font-semibold">Order #{currentOrder.orderNumber}</h3>
+              <p className="text-xs text-muted-foreground">
+                {new Date(currentOrder.createdAt).toLocaleString()}
+              </p>
+            </div>
             <Badge 
               className={`${
-                orderStatus === "placed" ? "bg-blue-500" :
-                orderStatus === "preparing" ? "bg-restaurant-orange" :
-                orderStatus === "ready" ? "bg-status-available" :
+                currentOrder.status === "pending" ? "bg-yellow-500" :
+                currentOrder.status === "paid" ? "bg-green-500" :
+                currentOrder.status === "preparing" ? "bg-restaurant-orange" :
+                currentOrder.status === "ready" ? "bg-status-available" :
                 "bg-restaurant-grey-500"
               } text-white`}
             >
-              {statusSteps.find(step => step.id === orderStatus)?.label}
+              {statusSteps.find(step => step.id === currentOrder.status)?.label || currentOrder.status}
             </Badge>
           </div>
           
           <div className="space-y-2">
-            {currentOrder.map((item) => (
+            {currentOrder.orderItems.map((item: any) => (
               <div key={item.id} className="flex justify-between text-sm">
-                <span>{item.quantity}x {item.name}</span>
+                <span>{item.quantity}x {item.menuItem.name}</span>
                 <span className="font-medium">₹{item.price * item.quantity}</span>
               </div>
             ))}
           </div>
           
+          <div className="space-y-1 text-sm border-t pt-2">
+            <div className="flex justify-between">
+              <span>Subtotal</span>
+              <span>₹{currentOrder.totalAmount}</span>
+            </div>
+            <div className="flex justify-between text-muted-foreground">
+              <span>Service Charge</span>
+              <span>₹{currentOrder.serviceCharge}</span>
+            </div>
+            <div className="flex justify-between text-muted-foreground">
+              <span>GST</span>
+              <span>₹{currentOrder.gst}</span>
+            </div>
+          </div>
+          
           <div className="flex justify-between font-semibold text-lg border-t pt-2">
-            <span>Total</span>
-            <span className="text-primary">₹{getTotalAmount()}</span>
+            <span>Grand Total</span>
+            <span className="text-primary">₹{currentOrder.grandTotal}</span>
           </div>
 
           <div className="flex items-center justify-between text-sm bg-restaurant-grey-50 p-3 rounded-lg">
@@ -175,7 +249,7 @@ export const OrderStatus = ({ orderStatus, currentOrder }: OrderStatusProps) => 
       </Card>
 
       {/* Special Messages */}
-      {orderStatus === "preparing" && (
+      {currentOrder.status === "preparing" && (
         <Card className="restaurant-card bg-restaurant-orange/10 border-restaurant-orange">
           <div className="flex items-center space-x-3">
             <ChefHat className="h-6 w-6 text-restaurant-orange" />
@@ -189,7 +263,7 @@ export const OrderStatus = ({ orderStatus, currentOrder }: OrderStatusProps) => 
         </Card>
       )}
 
-      {orderStatus === "ready" && (
+      {currentOrder.status === "ready" && (
         <Card className="restaurant-card bg-status-available/10 border-status-available">
           <div className="flex items-center space-x-3">
             <Utensils className="h-6 w-6 text-status-available" />

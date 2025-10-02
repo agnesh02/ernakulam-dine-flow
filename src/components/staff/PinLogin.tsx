@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Lock, Delete } from "lucide-react";
+import { authAPI } from "@/lib/api";
 
 interface PinLoginProps {
   onLogin: () => void;
@@ -10,23 +11,29 @@ interface PinLoginProps {
 export const PinLogin = ({ onLogin }: PinLoginProps) => {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const correctPin = "1234"; // Demo PIN
-
-  const handleNumberClick = (number: string) => {
+  const handleNumberClick = async (number: string) => {
     if (pin.length < 4) {
       const newPin = pin + number;
       setPin(newPin);
       
       if (newPin.length === 4) {
-        if (newPin === correctPin) {
+        setIsLoading(true);
+        try {
+          const response = await authAPI.login(newPin);
+          // Store auth token and staff info
+          localStorage.setItem('authToken', response.token);
+          localStorage.setItem('staffInfo', JSON.stringify(response.staff));
           onLogin();
-        } else {
-          setError("Invalid PIN");
+        } catch (err: any) {
+          setError(err.message || "Invalid PIN");
           setTimeout(() => {
             setPin("");
             setError("");
           }, 1500);
+        } finally {
+          setIsLoading(false);
         }
       }
     }
@@ -80,6 +87,7 @@ export const PinLogin = ({ onLogin }: PinLoginProps) => {
               size="lg"
               className="h-16 text-xl font-semibold hover:bg-accent hover:text-accent-foreground transition-all duration-200"
               onClick={() => handleNumberClick(number.toString())}
+              disabled={isLoading}
             >
               {number}
             </Button>
@@ -90,6 +98,7 @@ export const PinLogin = ({ onLogin }: PinLoginProps) => {
             size="lg"
             className="h-16 text-xl font-semibold hover:bg-accent hover:text-accent-foreground transition-all duration-200"
             onClick={() => handleNumberClick("0")}
+            disabled={isLoading}
           >
             0
           </Button>
@@ -98,6 +107,7 @@ export const PinLogin = ({ onLogin }: PinLoginProps) => {
             size="lg"
             className="h-16 hover:bg-destructive hover:text-destructive-foreground transition-all duration-200"
             onClick={handleDelete}
+            disabled={isLoading}
           >
             <Delete className="h-6 w-6" />
           </Button>

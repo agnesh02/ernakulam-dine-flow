@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { menuAPI, orderAPI } from "@/lib/api";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +13,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { 
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Search, 
   Plus, 
   Minus, 
@@ -23,7 +31,11 @@ import {
   Salad,
   Dessert,
   Star,
-  X
+  X,
+  CreditCard,
+  Wallet,
+  CheckCircle2,
+  Loader2
 } from "lucide-react";
 
 interface MenuItem {
@@ -42,10 +54,23 @@ interface OrderItem extends MenuItem {
   quantity: number;
 }
 
+interface CreatedOrder {
+  id: string;
+  orderNumber: string;
+  status: string;
+  totalAmount: number;
+  serviceCharge: number;
+  gst: number;
+  grandTotal: number;
+  paymentStatus: string;
+  paymentMethod?: string;
+  createdAt: string;
+}
+
 interface DigitalMenuProps {
-  currentOrder: OrderItem[];
-  setCurrentOrder: (order: OrderItem[]) => void;
-  setOrderStatus: (status: "none" | "placed" | "preparing" | "ready" | "served") => void;
+  cart: OrderItem[];
+  setCart: (order: OrderItem[]) => void;
+  onOrderPlaced: (order: CreatedOrder) => void;
 }
 
 const categoryIcons = {
@@ -55,155 +80,153 @@ const categoryIcons = {
   desserts: Dessert,
 };
 
-export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: DigitalMenuProps) => {
+export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [showCart, setShowCart] = useState(false);
+  const [showPaymentChoice, setShowPaymentChoice] = useState(false);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const { toast } = useToast();
 
-  const menuItems: MenuItem[] = [
-    {
-      id: "1",
-      name: "Chicken Biryani",
-      category: "mains",
-      price: 299,
-      description: "Aromatic basmati rice with tender chicken pieces, served with raita and pickle",
-      prepTime: 25,
-      rating: 4.8,
-      isAvailable: true,
-    },
-    {
-      id: "2",
-      name: "Masala Dosa",
-      category: "mains",
-      price: 149,
-      description: "Crispy crepe with spiced potato filling, served with sambar and chutneys",
-      prepTime: 15,
-      rating: 4.6,
-      isAvailable: true,
-    },
-    {
-      id: "3",
-      name: "Fish Curry",
-      category: "mains",
-      price: 249,
-      description: "Traditional Kerala fish curry with coconut milk and spices",
-      prepTime: 20,
-      rating: 4.7,
-      isAvailable: false,
-    },
-    {
-      id: "4",
-      name: "Filter Coffee",
-      category: "beverages",
-      price: 45,
-      description: "Traditional South Indian filter coffee, strong and aromatic",
-      prepTime: 5,
-      rating: 4.5,
-      isAvailable: true,
-    },
-    {
-      id: "5",
-      name: "Mango Lassi",
-      category: "beverages",
-      price: 75,
-      description: "Refreshing yogurt-based drink with fresh mango",
-      prepTime: 3,
-      rating: 4.4,
-      isAvailable: true,
-    },
-    {
-      id: "6",
-      name: "Samosa",
-      category: "appetizers",
-      price: 89,
-      description: "Crispy fried pastry with savory potato and pea filling",
-      prepTime: 10,
-      rating: 4.3,
-      isAvailable: true,
-    },
-    {
-      id: "7",
-      name: "Gulab Jamun",
-      category: "desserts",
-      price: 79,
-      description: "Sweet milk dumplings in warm sugar syrup",
-      prepTime: 8,
-      rating: 4.6,
-      isAvailable: false,
-    },
-    {
-      id: "8",
-      name: "Tandoori Chicken",
-      category: "mains",
-      price: 349,
-      description: "Marinated chicken grilled in tandoor, served with mint chutney",
-      prepTime: 30,
-      rating: 4.9,
-      isAvailable: true,
-    },
-  ];
+  // Fetch menu items on mount
+  useEffect(() => {
+    fetchMenuItems();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const addToOrder = (item: MenuItem) => {
-    const existingItem = currentOrder.find(orderItem => orderItem.id === item.id);
-    if (existingItem) {
-      setCurrentOrder(
-        currentOrder.map(orderItem =>
-          orderItem.id === item.id
-            ? { ...orderItem, quantity: orderItem.quantity + 1 }
-            : orderItem
-        )
-      );
-    } else {
-      setCurrentOrder([...currentOrder, { ...item, quantity: 1 }]);
+  const fetchMenuItems = async () => {
+    try {
+      setIsLoading(true);
+      const items = await menuAPI.getAll(true); // Only get available items
+      setMenuItems(items);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to fetch menu items";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const removeFromOrder = (itemId: string) => {
-    const existingItem = currentOrder.find(orderItem => orderItem.id === itemId);
-    if (existingItem && existingItem.quantity > 1) {
-      setCurrentOrder(
-        currentOrder.map(orderItem =>
-          orderItem.id === itemId
-            ? { ...orderItem, quantity: orderItem.quantity - 1 }
-            : orderItem
+  const addToCart = (item: MenuItem) => {
+    const existingItem = cart.find(cartItem => cartItem.id === item.id);
+    if (existingItem) {
+      setCart(
+        cart.map(cartItem =>
+          cartItem.id === item.id
+            ? { ...cartItem, quantity: cartItem.quantity + 1 }
+            : cartItem
         )
       );
     } else {
-      setCurrentOrder(currentOrder.filter(orderItem => orderItem.id !== itemId));
+      setCart([...cart, { ...item, quantity: 1 }]);
+    }
+  };
+
+  const removeFromCart = (itemId: string) => {
+    const existingItem = cart.find(cartItem => cartItem.id === itemId);
+    if (existingItem && existingItem.quantity > 1) {
+      setCart(
+        cart.map(cartItem =>
+          cartItem.id === itemId
+            ? { ...cartItem, quantity: cartItem.quantity - 1 }
+            : cartItem
+        )
+      );
+    } else {
+      setCart(cart.filter(cartItem => cartItem.id !== itemId));
     }
   };
 
   const getItemQuantity = (itemId: string) => {
-    const item = currentOrder.find(orderItem => orderItem.id === itemId);
+    const item = cart.find(cartItem => cartItem.id === itemId);
     return item ? item.quantity : 0;
   };
 
   const getTotalAmount = () => {
-    return currentOrder.reduce((total, item) => total + (item.price * item.quantity), 0);
+    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
   const getTotalItems = () => {
-    return currentOrder.reduce((total, item) => total + item.quantity, 0);
+    return cart.reduce((total, item) => total + item.quantity, 0);
   };
 
-  const placeOrder = () => {
-    if (currentOrder.length > 0) {
-      setOrderStatus("placed");
+  const handlePlaceOrderClick = () => {
+    if (cart.length === 0) return;
+    setShowCart(false);
+    setShowPaymentChoice(true);
+  };
+
+  const placeOrderWithPaymentMethod = async (paymentChoice: 'prepay' | 'postpay') => {
+    if (cart.length === 0) return;
+
+    setIsPlacingOrder(true);
+    
+    try {
+      // If prepay, process payment first
+      if (paymentChoice === 'prepay') {
+        setIsProcessingPayment(true);
+        
+        // Simulate payment gateway processing
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Mock payment success (in real app, integrate with payment gateway)
+        const paymentSuccess = true; // This would come from payment gateway
+        
+        if (!paymentSuccess) {
+          throw new Error('Payment failed. Please try again or choose Pay Later option.');
+        }
+      }
+      
+      // Prepare order items for API
+      const orderItems = cart.map(item => ({
+        menuItemId: item.id,
+        quantity: item.quantity,
+      }));
+
+      // Create order via API with payment info
+      const createdOrder = await orderAPI.create({ 
+        items: orderItems,
+        paymentMethod: paymentChoice === 'prepay' ? 'online' : 'cash',
+      });
+
+      // If prepay, mark as paid immediately
+      if (paymentChoice === 'prepay') {
+        await orderAPI.markPaid(createdOrder.id, 'online');
+      }
+
+      // Notify parent component
+      onOrderPlaced(createdOrder);
       
       // Show success toast
       toast({
-        title: "Order Placed Successfully! 🎉",
-        description: `Your order for ${getTotalItems()} items (₹${getTotalAmount()}) has been sent to the kitchen.`,
-        duration: 4000,
+        title: paymentChoice === 'prepay' ? "Order Placed & Paid! 🎉" : "Order Placed Successfully! 🎉",
+        description: paymentChoice === 'prepay' 
+          ? `Your order #${createdOrder.orderNumber} is confirmed and paid. Total: ₹${createdOrder.grandTotal}`
+          : `Your order #${createdOrder.orderNumber} has been placed. Pay after your meal is served.`,
+        duration: 5000,
       });
       
-      // Show success message and automatically navigate to order status
-      // Simulate order progression
-      setTimeout(() => setOrderStatus("preparing"), 3000);
-      setTimeout(() => setOrderStatus("ready"), 20000);
+      setShowPaymentChoice(false);
+      
       // Scroll to top to see the tabs
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to place order. Please try again.";
+      toast({
+        title: "Order Failed",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsPlacingOrder(false);
+      setIsProcessingPayment(false);
     }
   };
 
@@ -215,6 +238,16 @@ export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: D
   });
 
   const categories = Array.from(new Set(menuItems.map(item => item.category)));
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Card className="restaurant-card text-center py-12">
+          <p className="text-muted-foreground">Loading menu...</p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -302,7 +335,7 @@ export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: D
                 <div className="flex items-center justify-between">
                   {quantity === 0 ? (
                     <Button
-                      onClick={() => addToOrder(item)}
+                      onClick={() => addToCart(item)}
                       className="restaurant-button-accent flex-1 h-10 sm:h-11 text-sm sm:text-base touch-manipulation"
                     >
                       <Plus className="h-4 w-4 mr-2" />
@@ -313,7 +346,7 @@ export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: D
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => removeFromOrder(item.id)}
+                        onClick={() => removeFromCart(item.id)}
                         className="h-8 w-8 sm:h-9 sm:w-9 p-0 touch-manipulation"
                       >
                         <Minus className="h-4 w-4" />
@@ -322,7 +355,7 @@ export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: D
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => addToOrder(item)}
+                        onClick={() => addToCart(item)}
                         className="h-8 w-8 sm:h-9 sm:w-9 p-0 touch-manipulation"
                       >
                         <Plus className="h-4 w-4" />
@@ -340,7 +373,7 @@ export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: D
       </div>
 
       {/* Floating Order Summary */}
-      {currentOrder.length > 0 && (
+      {cart.length > 0 && (
         <div className="fixed bottom-4 left-4 right-4 z-50">
           <Card className="restaurant-card bg-primary text-primary-foreground border-primary shadow-lg">
             <div className="flex items-center justify-between">
@@ -377,7 +410,7 @@ export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: D
                     </DialogHeader>
 
                     <div className="space-y-4">
-                      {currentOrder.length === 0 ? (
+                      {cart.length === 0 ? (
                         <div className="text-center py-8">
                           <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                           <p className="text-muted-foreground">Your cart is empty</p>
@@ -386,7 +419,7 @@ export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: D
                         <>
                           {/* Cart Items */}
                           <div className="space-y-3">
-                            {currentOrder.map((item) => {
+                            {cart.map((item) => {
                               const Icon = categoryIcons[item.category as keyof typeof categoryIcons] || ChefHat;
                               return (
                                 <Card key={item.id} className="p-4">
@@ -405,7 +438,7 @@ export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: D
                                       <Button
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => removeFromOrder(item.id)}
+                                        onClick={() => removeFromCart(item.id)}
                                         className="h-6 w-6 p-0"
                                       >
                                         <Minus className="h-3 w-3" />
@@ -414,7 +447,7 @@ export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: D
                                       <Button
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => addToOrder(item)}
+                                        onClick={() => addToCart(item)}
                                         className="h-6 w-6 p-0"
                                       >
                                         <Plus className="h-3 w-3" />
@@ -422,7 +455,7 @@ export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: D
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => removeFromOrder(item.id)}
+                                        onClick={() => removeFromCart(item.id)}
                                         className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
                                       >
                                         <X className="h-3 w-3" />
@@ -477,10 +510,8 @@ export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: D
                               Continue Shopping
                             </Button>
                             <Button
-                              onClick={() => {
-                                setShowCart(false);
-                                placeOrder();
-                              }}
+                              onClick={handlePlaceOrderClick}
+                              disabled={isPlacingOrder}
                               className="flex-1 restaurant-gradient-accent text-white hover:opacity-90"
                             >
                               Place Order
@@ -493,7 +524,8 @@ export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: D
                 </Dialog>
                 
                 <Button
-                  onClick={placeOrder}
+                  onClick={handlePlaceOrderClick}
+                  disabled={isPlacingOrder}
                   className="restaurant-gradient-accent text-white hover:opacity-90 shadow-orange px-4 py-2 h-10 font-medium transition-all duration-300"
                 >
                   Place Order →
@@ -511,6 +543,104 @@ export const DigitalMenu = ({ currentOrder, setCurrentOrder, setOrderStatus }: D
           <p className="text-muted-foreground">Try searching for something else or check other categories</p>
         </Card>
       )}
+
+       {/* Payment Choice Dialog */}
+       <AlertDialog open={showPaymentChoice} onOpenChange={setShowPaymentChoice}>
+         <AlertDialogContent className="w-[95vw] max-w-md mx-auto max-h-[90vh] overflow-y-auto">
+           <AlertDialogHeader className="pb-3">
+             <AlertDialogTitle className="text-lg">Choose Payment Method</AlertDialogTitle>
+             <AlertDialogDescription className="text-sm">
+               Select how you'd like to pay for your order
+             </AlertDialogDescription>
+           </AlertDialogHeader>
+
+           {isPlacingOrder ? (
+             <div className="py-6 text-center space-y-3">
+               {isProcessingPayment ? (
+                 <>
+                   <Loader2 className="h-12 w-12 text-primary mx-auto animate-spin" />
+                   <h3 className="text-base font-semibold">Processing Payment...</h3>
+                   <p className="text-xs text-muted-foreground">
+                     Please wait while we process your payment securely
+                   </p>
+                 </>
+               ) : (
+                 <>
+                   <Loader2 className="h-12 w-12 text-primary mx-auto animate-spin" />
+                   <h3 className="text-base font-semibold">Placing Your Order...</h3>
+                   <p className="text-xs text-muted-foreground">
+                     Sending your order to the kitchen
+                   </p>
+                 </>
+               )}
+             </div>
+           ) : (
+             <div className="space-y-3">
+               {/* Prepay Option */}
+               <Button
+                 onClick={() => placeOrderWithPaymentMethod('prepay')}
+                 className="w-full h-auto p-3 flex items-start space-x-3 hover:bg-accent hover:text-accent-foreground"
+                 variant="outline"
+               >
+                 <div className="p-2 bg-green-100 rounded-lg flex-shrink-0">
+                   <CreditCard className="h-5 w-5 text-green-600" />
+                 </div>
+                 <div className="flex-1 text-left">
+                   <h4 className="font-semibold text-sm mb-1">Pay Now (Online)</h4>
+                   <p className="text-xs text-muted-foreground">
+                     UPI, Card, Net Banking • Instant confirmation
+                   </p>
+                   <div className="flex items-center mt-1 text-xs text-green-600">
+                     <CheckCircle2 className="h-3 w-3 mr-1" />
+                     Recommended
+                   </div>
+                 </div>
+               </Button>
+
+               {/* Postpay Option */}
+               <Button
+                 onClick={() => placeOrderWithPaymentMethod('postpay')}
+                 className="w-full h-auto p-3 flex items-start space-x-3 hover:bg-accent hover:text-accent-foreground"
+                 variant="outline"
+               >
+                 <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                   <Wallet className="h-5 w-5 text-blue-600" />
+                 </div>
+                 <div className="flex-1 text-left">
+                   <h4 className="font-semibold text-sm mb-1">Pay Later (Cash/Card)</h4>
+                   <p className="text-xs text-muted-foreground">
+                     Pay after meal • Cash, Card, UPI accepted
+                   </p>
+                   <div className="flex items-center mt-1 text-xs text-blue-600">
+                     <CheckCircle2 className="h-3 w-3 mr-1" />
+                     Flexible
+                   </div>
+                 </div>
+               </Button>
+
+               {/* Order Summary */}
+               <div className="mt-3 p-3 bg-muted rounded-lg">
+                 <div className="flex justify-between items-center text-sm">
+                   <span className="text-muted-foreground">Order Total</span>
+                   <span className="font-bold">₹{getTotalAmount() + Math.round(getTotalAmount() * 0.23)}</span>
+                 </div>
+                 <p className="text-xs text-muted-foreground mt-1">
+                   Includes GST and Service Charge
+                 </p>
+               </div>
+
+               {/* Cancel Button */}
+               <Button
+                 onClick={() => setShowPaymentChoice(false)}
+                 variant="ghost"
+                 className="w-full h-9 text-sm"
+               >
+                 Cancel
+               </Button>
+             </div>
+           )}
+         </AlertDialogContent>
+       </AlertDialog>
     </div>
   );
 };
