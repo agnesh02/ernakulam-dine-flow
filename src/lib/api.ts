@@ -118,10 +118,53 @@ export const orderAPI = {
     });
   },
 
+  createPayment: async (id: string) => {
+    return authFetch(`/orders/${id}/create-payment`, {
+      method: 'POST',
+    });
+  },
+
+  verifyPayment: async (id: string, paymentData: {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+  }) => {
+    return authFetch(`/orders/${id}/verify-payment`, {
+      method: 'POST',
+      body: JSON.stringify(paymentData),
+    });
+  },
+
+  // Prepayment methods (create order ONLY after payment succeeds)
+  createPrepayment: async (items: Array<{ menuItemId: string; quantity: number; notes?: string }>) => {
+    return authFetch('/orders/create-prepayment', {
+      method: 'POST',
+      body: JSON.stringify({ items }),
+    });
+  },
+
+  verifyPrepayment: async (paymentData: {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+    items: Array<{ menuItemId: string; quantity: number; notes?: string }>;
+  }) => {
+    return authFetch('/orders/verify-prepayment', {
+      method: 'POST',
+      body: JSON.stringify(paymentData),
+    });
+  },
+
   markPaid: async (id: string, paymentMethod = 'cash') => {
     return authFetch(`/orders/${id}/payment`, {
       method: 'POST',
       body: JSON.stringify({ paymentMethod }),
+    });
+  },
+
+  cancelOrder: async (id: string) => {
+    return authFetch(`/orders/${id}/cancel`, {
+      method: 'POST',
     });
   },
 

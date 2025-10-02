@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { menuAPI, orderAPI } from "@/lib/api";
+import { openRazorpayPayment, RAZORPAY_KEY_ID, RazorpayOptions, debugRazorpayEnvironment } from "@/lib/razorpay";
 import {
   Dialog,
   DialogContent,
@@ -169,54 +170,147 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
     setIsPlacingOrder(true);
     
     try {
-      // If prepay, process payment first
-      if (paymentChoice === 'prepay') {
-        setIsProcessingPayment(true);
-        
-        // Simulate payment gateway processing
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Mock payment success (in real app, integrate with payment gateway)
-        const paymentSuccess = true; // This would come from payment gateway
-        
-        if (!paymentSuccess) {
-          throw new Error('Payment failed. Please try again or choose Pay Later option.');
-        }
-      }
-      
-      // Prepare order items for API
+      // Prepare order items
       const orderItems = cart.map(item => ({
         menuItemId: item.id,
         quantity: item.quantity,
       }));
 
-      // Create order via API with payment info
-      const createdOrder = await orderAPI.create({ 
-        items: orderItems,
-        paymentMethod: paymentChoice === 'prepay' ? 'online' : 'cash',
-      });
-
-      // If prepay, mark as paid immediately
+      // IMPROVED FLOW: For prepay, process payment FIRST, create order ONLY after success
       if (paymentChoice === 'prepay') {
-        await orderAPI.markPaid(createdOrder.id, 'online');
-      }
+        setIsProcessingPayment(true);
+        
+        // Close payment choice dialog first
+        setShowPaymentChoice(false);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Debug Razorpay environment
+        debugRazorpayEnvironment();
+        
+        // Step 1: Create Razorpay payment order (NO restaurant order created yet!)
+        const paymentData = await orderAPI.createPrepayment(orderItems);
+        
+        // Step 2: Process Payment FIRST (no order exists yet)
+        try {
+          // Show payment processing state
+          toast({
+            title: "Opening Payment Gateway...",
+            description: "Complete payment to place your order.",
+          });
 
-      // Notify parent component
-      onOrderPlaced(createdOrder);
-      
-      // Show success toast
-      toast({
-        title: paymentChoice === 'prepay' ? "Order Placed & Paid! 🎉" : "Order Placed Successfully! 🎉",
-        description: paymentChoice === 'prepay' 
-          ? `Your order #${createdOrder.orderNumber} is confirmed and paid. Total: ₹${createdOrder.grandTotal}`
-          : `Your order #${createdOrder.orderNumber} has been placed. Pay after your meal is served.`,
-        duration: 5000,
-      });
-      
-      setShowPaymentChoice(false);
-      
-      // Scroll to top to see the tabs
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+          // Open payment gateway
+          await new Promise<void>((resolvePayment, rejectPayment) => {
+            const razorpayOptions: RazorpayOptions = {
+              key: RAZORPAY_KEY_ID,
+              amount: paymentData.amount * 100, // Convert to paise
+              currency: paymentData.currency,
+              name: 'Ernakulam Dine Flow',
+              description: `Order Total: ₹${paymentData.amount}`,
+              order_id: paymentData.razorpayOrderId,
+              prefill: {
+                name: 'Customer',
+                email: 'customer@example.com',
+                contact: '9999999999',
+              },
+              theme: {
+                color: '#f97316',
+              },
+              handler: async (response: any) => {
+                try {
+                  // Step 3: Payment successful! Create order NOW
+                  console.log('💳 Razorpay payment successful, response:', response);
+                  
+                  toast({
+                    title: "Payment Successful!",
+                    description: "Creating your order...",
+                  });
+
+                  // Verify payment and create order in one call
+                  console.log('🔐 Verifying prepayment with data:', {
+                    razorpay_order_id: response.razorpay_order_id,
+                    razorpay_payment_id: response.razorpay_payment_id,
+                    has_signature: !!response.razorpay_signature,
+                    items_count: orderItems.length
+                  });
+                  
+                  const result = await orderAPI.verifyPrepayment({
+                    razorpay_order_id: response.razorpay_order_id,
+                    razorpay_payment_id: response.razorpay_payment_id,
+                    razorpay_signature: response.razorpay_signature,
+                    items: orderItems,
+                  });
+
+                  console.log('✅ Verification successful, order created:', result);
+                  const createdOrder = result.order;
+
+                  // Notify parent component (order is now created and sent to kitchen)
+                  onOrderPlaced(createdOrder);
+                  
+                  // Show success toast
+                  toast({
+                    title: "Order Placed & Paid! 🎉",
+                    description: `Your order #${createdOrder.orderNumber} is confirmed and sent to kitchen. Total: ₹${createdOrder.grandTotal}`,
+                    duration: 5000,
+                  });
+                  
+                  // Scroll to top
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  
+                  resolvePayment();
+                } catch (error: unknown) {
+                  console.error('❌ Error in payment verification:', error);
+                  const message = error instanceof Error ? error.message : "Failed to create order after payment";
+                  console.error('❌ Error message:', message);
+                  toast({
+                    title: "Order Creation Failed",
+                    description: message + " - Please contact support with your payment details.",
+                    variant: "destructive",
+                  });
+                  rejectPayment(new Error(message));
+                }
+              },
+              modal: {
+                ondismiss: () => {
+                  // Step 4: Payment cancelled - NO order to cancel (none was created!)
+                  toast({
+                    title: "Payment Cancelled",
+                    description: "Order was not placed. You can try again or choose Pay Later.",
+                    variant: "destructive",
+                  });
+                  rejectPayment(new Error('Payment cancelled by user'));
+                },
+              },
+            };
+
+            openRazorpayPayment(razorpayOptions).catch(rejectPayment);
+          });
+
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : "Payment was not completed";
+          throw new Error(message);
+        }
+      } else {
+        // POSTPAY: Create order immediately (existing flow)
+        const createdOrder = await orderAPI.create({ 
+          items: orderItems,
+          paymentMethod: 'cash',
+        });
+
+        // Notify parent component
+        onOrderPlaced(createdOrder);
+        
+        // Show success toast
+        toast({
+          title: "Order Placed Successfully! 🎉",
+          description: `Your order #${createdOrder.orderNumber} has been placed. Pay after your meal is served.`,
+          duration: 5000,
+        });
+        
+        setShowPaymentChoice(false);
+        
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Failed to place order. Please try again.";
       toast({

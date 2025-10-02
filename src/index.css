@@ -4,6 +4,34 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Razorpay Modal Fixes */
+.razorpay-checkout-frame {
+  z-index: 999999 !important;
+}
+
+.razorpay-checkout-modal {
+  z-index: 999999 !important;
+}
+
+/* Ensure Razorpay iframe is interactive */
+iframe[src*="razorpay"] {
+  z-index: 999999 !important;
+  pointer-events: auto !important;
+}
+
+/* Fix for modal conflicts */
+[data-radix-portal] {
+  z-index: 50;
+}
+
+/* Ensure Razorpay modal appears above everything */
+.razorpay-checkout-modal,
+.razorpay-checkout-frame,
+iframe[src*="checkout.razorpay.com"] {
+  z-index: 999999 !important;
+  position: fixed !important;
+}
+
 /* Restaurant Management Design System - Professional & Modern */
 
 @layer base {
