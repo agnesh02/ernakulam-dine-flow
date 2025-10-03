@@ -136,11 +136,46 @@ export const CustomerApp = () => {
           <h2 className="text-2xl font-bold text-primary mb-2">Customer Experience</h2>
           <p className="text-muted-foreground">Mobile-first PWA for guests at the table</p>
         </div>
-        <Card className="restaurant-card text-center py-12">
-          <Loader2 className="h-16 w-16 text-primary mx-auto mb-4 animate-spin" />
-          <h3 className="text-lg font-semibold mb-2">Loading...</h3>
-          <p className="text-muted-foreground">Restoring your session</p>
+        
+        {/* Tabs Skeleton */}
+        <Card className="restaurant-card">
+          <div className="flex space-x-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-12 flex-1 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-lg animate-shimmer bg-[length:200%_100%]" />
+            ))}
+          </div>
         </Card>
+
+        {/* Content Skeleton */}
+        <Card className="restaurant-card">
+          <div className="space-y-4">
+            <div className="h-10 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-md animate-shimmer bg-[length:200%_100%]" />
+            <div className="flex space-x-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-9 w-24 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-md animate-shimmer bg-[length:200%_100%]" />
+              ))}
+            </div>
+          </div>
+        </Card>
+
+        {[1, 2, 3].map((i) => (
+          <Card key={i} className="restaurant-card">
+            <div className="space-y-4">
+              <div className="flex items-start space-x-3">
+                <div className="h-12 w-12 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-lg animate-shimmer bg-[length:200%_100%]" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-5 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-3/4 animate-shimmer bg-[length:200%_100%]" />
+                  <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-full animate-shimmer bg-[length:200%_100%]" />
+                  <div className="flex space-x-4">
+                    <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-16 animate-shimmer bg-[length:200%_100%]" />
+                    <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-16 animate-shimmer bg-[length:200%_100%]" />
+                  </div>
+                </div>
+              </div>
+              <div className="h-10 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded animate-shimmer bg-[length:200%_100%]" />
+            </div>
+          </Card>
+        ))}
       </div>
     );
   }

@@ -91,11 +91,57 @@ export const OrderStatus = ({ currentOrder, orderId }: OrderStatusProps) => {
 
   if (isLoading) {
     return (
-      <Card className="restaurant-card text-center py-12">
-        <Loader2 className="h-16 w-16 text-muted-foreground mx-auto mb-4 animate-spin" />
-        <h3 className="text-lg font-semibold mb-2">Loading Order...</h3>
-        <p className="text-muted-foreground">Fetching your order details</p>
-      </Card>
+      <div className="space-y-6">
+        {/* Order Summary Skeleton */}
+        <Card className="restaurant-card">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2 flex-1">
+                <div className="h-6 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-2/3 animate-shimmer bg-[length:200%_100%]" />
+                <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-1/3 animate-shimmer bg-[length:200%_100%]" />
+              </div>
+              <div className="h-8 w-24 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-full animate-shimmer bg-[length:200%_100%]" />
+            </div>
+            
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex justify-between">
+                  <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-1/2 animate-shimmer bg-[length:200%_100%]" />
+                  <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-16 animate-shimmer bg-[length:200%_100%]" />
+                </div>
+              ))}
+            </div>
+            
+            <div className="border-t pt-4 space-y-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex justify-between">
+                  <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-1/3 animate-shimmer bg-[length:200%_100%]" />
+                  <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-20 animate-shimmer bg-[length:200%_100%]" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+
+        {/* Progress Timeline Skeleton */}
+        <Card className="restaurant-card">
+          <div className="space-y-6">
+            <div className="h-6 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-1/3 animate-shimmer bg-[length:200%_100%]" />
+            
+            <div className="space-y-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex items-start space-x-4">
+                  <div className="h-10 w-10 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-full animate-shimmer bg-[length:200%_100%]" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-5 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-1/2 animate-shimmer bg-[length:200%_100%]" />
+                    <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-3/4 animate-shimmer bg-[length:200%_100%]" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+      </div>
     );
   }
 
@@ -144,6 +190,13 @@ export const OrderStatus = ({ currentOrder, orderId }: OrderStatusProps) => {
             </Badge>
           </div>
           
+          <div className="flex items-center justify-between text-sm mb-2 pb-2 border-b">
+            <span className="text-muted-foreground">Order Type:</span>
+            <Badge variant="outline" className="capitalize">
+              {currentOrder.orderType === 'takeaway' ? '🛍️ Takeaway' : '🍽️ Dine-In'}
+            </Badge>
+          </div>
+
           <div className="space-y-2">
             {currentOrder.orderItems.map((item: any) => (
               <div key={item.id} className="flex justify-between text-sm">

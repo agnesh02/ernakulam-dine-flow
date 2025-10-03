@@ -3,8 +3,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PinLogin } from "./PinLogin";
 import { TableManagement } from "./TableManagement";
 import { OrderManagement } from "./OrderManagement";
+import { OrderHistory } from "./OrderHistory";
 import { MenuControl } from "./MenuControl";
-import { LayoutGrid, ClipboardList, Menu, Settings } from "lucide-react";
+import { LayoutGrid, ClipboardList, Menu, Settings, History } from "lucide-react";
 
 export const StaffDashboard = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -21,7 +22,7 @@ export const StaffDashboard = () => {
       </div>
 
       <Tabs defaultValue="orders" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 mb-4 sm:mb-6 h-auto">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-4 sm:mb-6 h-auto">
           {/* TABLE MANAGEMENT TEMPORARILY DISABLED */}
           {/* <TabsTrigger 
             value="tables" 
@@ -48,12 +49,12 @@ export const StaffDashboard = () => {
             <span className="xs:hidden">Menu</span>
           </TabsTrigger>
           <TabsTrigger 
-            value="settings" 
+            value="history" 
             className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground py-3 px-2 text-xs sm:text-sm touch-manipulation"
           >
-            <Settings className="h-4 w-4" />
-            <span className="hidden xs:inline">Settings</span>
-            <span className="xs:hidden">Settings</span>
+            <History className="h-4 w-4" />
+            <span className="hidden xs:inline">History</span>
+            <span className="xs:hidden">History</span>
           </TabsTrigger>
         </TabsList>
 
@@ -70,12 +71,8 @@ export const StaffDashboard = () => {
           <MenuControl />
         </TabsContent>
 
-        <TabsContent value="settings">
-          <div className="restaurant-card text-center py-12">
-            <Settings className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Settings Panel</h3>
-            <p className="text-muted-foreground">Restaurant configuration and preferences</p>
-          </div>
+        <TabsContent value="history">
+          <OrderHistory />
         </TabsContent>
       </Tabs>
     </div>

@@ -22,9 +22,12 @@ async function main() {
 
   console.log('✅ Created staff:', staff.name);
 
-  // Create menu items
-  // Delete existing menu items first
+  // Delete existing data in correct order (to avoid foreign key violations)
+  await prisma.orderItem.deleteMany({});
+  await prisma.order.deleteMany({});
   await prisma.menuItem.deleteMany({});
+  
+  console.log('✅ Cleared existing data');
   
   const menuItems = [
     {
@@ -35,6 +38,7 @@ async function main() {
       prepTime: 25,
       rating: 4.8,
       isAvailable: true,
+      isVegetarian: false,
     },
     {
       name: 'Masala Dosa',
@@ -44,6 +48,7 @@ async function main() {
       prepTime: 15,
       rating: 4.6,
       isAvailable: true,
+      isVegetarian: true,
     },
     {
       name: 'Fish Curry',
@@ -53,6 +58,7 @@ async function main() {
       prepTime: 20,
       rating: 4.7,
       isAvailable: false,
+      isVegetarian: false,
     },
     {
       name: 'Filter Coffee',
@@ -62,6 +68,7 @@ async function main() {
       prepTime: 5,
       rating: 4.5,
       isAvailable: true,
+      isVegetarian: true,
     },
     {
       name: 'Mango Lassi',
@@ -71,6 +78,7 @@ async function main() {
       prepTime: 3,
       rating: 4.4,
       isAvailable: true,
+      isVegetarian: true,
     },
     {
       name: 'Samosa',
@@ -80,6 +88,7 @@ async function main() {
       prepTime: 10,
       rating: 4.3,
       isAvailable: true,
+      isVegetarian: true,
     },
     {
       name: 'Gulab Jamun',
@@ -89,6 +98,7 @@ async function main() {
       prepTime: 8,
       rating: 4.6,
       isAvailable: false,
+      isVegetarian: true,
     },
     {
       name: 'Tandoori Chicken',
@@ -98,6 +108,7 @@ async function main() {
       prepTime: 30,
       rating: 4.9,
       isAvailable: true,
+      isVegetarian: false,
     },
   ];
 
@@ -112,12 +123,11 @@ async function main() {
   console.log('✅ Created', createdMenuItems.length, 'menu items');
 
   // Create sample orders for demonstration
-  await prisma.order.deleteMany({});
-  
   const order1 = await prisma.order.create({
     data: {
       orderNumber: 'ORD-001',
       status: 'preparing',
+      orderType: 'dine-in',
       totalAmount: 598,
       serviceCharge: 30,
       gst: 108,

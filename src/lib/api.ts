@@ -95,6 +95,7 @@ export const orderAPI = {
     customerEmail?: string;
     customerPhone?: string;
     paymentMethod?: string;
+    orderType?: string;
   }) => {
     return authFetch('/orders', {
       method: 'POST',
@@ -148,6 +149,7 @@ export const orderAPI = {
     razorpay_payment_id: string;
     razorpay_signature: string;
     items: Array<{ menuItemId: string; quantity: number; notes?: string }>;
+    orderType?: string;
   }) => {
     return authFetch('/orders/verify-prepayment', {
       method: 'POST',
@@ -165,6 +167,12 @@ export const orderAPI = {
   cancelOrder: async (id: string) => {
     return authFetch(`/orders/${id}/cancel`, {
       method: 'POST',
+    });
+  },
+
+  removeOrderItem: async (orderId: string, itemId: string) => {
+    return authFetch(`/orders/${orderId}/items/${itemId}`, {
+      method: 'DELETE',
     });
   },
 

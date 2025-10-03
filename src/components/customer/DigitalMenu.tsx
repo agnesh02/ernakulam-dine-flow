@@ -36,7 +36,8 @@ import {
   CreditCard,
   Wallet,
   CheckCircle2,
-  Loader2
+  Loader2,
+  Utensils
 } from "lucide-react";
 
 interface MenuItem {
@@ -48,6 +49,7 @@ interface MenuItem {
   prepTime: number;
   rating: number;
   isAvailable: boolean;
+  isVegetarian: boolean;
   image?: string;
 }
 
@@ -84,8 +86,10 @@ const categoryIcons = {
 export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [dietaryFilter, setDietaryFilter] = useState<'all' | 'veg' | 'non-veg'>('all');
   const [showCart, setShowCart] = useState(false);
   const [showPaymentChoice, setShowPaymentChoice] = useState(false);
+  const [orderType, setOrderType] = useState<'dine-in' | 'takeaway'>('dine-in');
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
@@ -238,6 +242,7 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
                     razorpay_payment_id: response.razorpay_payment_id,
                     razorpay_signature: response.razorpay_signature,
                     items: orderItems,
+                    orderType: orderType,
                   });
 
                   console.log('✅ Verification successful, order created:', result);
@@ -294,6 +299,7 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
         const createdOrder = await orderAPI.create({ 
           items: orderItems,
           paymentMethod: 'cash',
+          orderType: orderType,
         });
 
         // Notify parent component
@@ -327,8 +333,11 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
   const filteredItems = menuItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === "all" || item.category === selectedCategory;
+    const matchesDietary = dietaryFilter === "all" || 
+                          (dietaryFilter === "veg" && item.isVegetarian) ||
+                          (dietaryFilter === "non-veg" && !item.isVegetarian);
     const isAvailable = item.isAvailable;
-    return matchesSearch && matchesCategory && isAvailable;
+    return matchesSearch && matchesCategory && matchesDietary && isAvailable;
   });
 
   const categories = Array.from(new Set(menuItems.map(item => item.category)));
@@ -336,9 +345,43 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <Card className="restaurant-card text-center py-12">
-          <p className="text-muted-foreground">Loading menu...</p>
+        {/* Search and Filter Skeleton */}
+        <Card className="restaurant-card">
+          <div className="space-y-4">
+            <div className="relative">
+              <div className="h-10 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-md animate-shimmer bg-[length:200%_100%]" />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-9 w-24 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-md animate-shimmer bg-[length:200%_100%]" />
+              ))}
+            </div>
+          </div>
         </Card>
+
+        {/* Menu Items Skeleton */}
+        <div className="grid gap-3 sm:gap-4">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Card key={i} className="restaurant-card">
+              <div className="space-y-3 sm:space-y-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-2 sm:space-x-3 flex-1">
+                    <div className="h-12 w-12 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-lg animate-shimmer bg-[length:200%_100%]" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-5 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-3/4 animate-shimmer bg-[length:200%_100%]" />
+                      <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-full animate-shimmer bg-[length:200%_100%]" />
+                      <div className="flex space-x-4">
+                        <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-16 animate-shimmer bg-[length:200%_100%]" />
+                        <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-16 animate-shimmer bg-[length:200%_100%]" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="h-10 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded animate-shimmer bg-[length:200%_100%]" />
+              </div>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
@@ -358,31 +401,74 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
             />
           </div>
           
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant={selectedCategory === "all" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedCategory("all")}
-              className={`text-xs sm:text-sm px-3 py-2 h-auto min-h-[36px] touch-manipulation ${selectedCategory === "all" ? "restaurant-button-accent" : ""}`}
-            >
-              All
-            </Button>
-            {categories.map((category) => {
-              const Icon = categoryIcons[category as keyof typeof categoryIcons] || ChefHat;
-              return (
+          <div className="space-y-3">
+            {/* Category Filter */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Categories</p>
+              <div className="flex flex-wrap gap-2">
                 <Button
-                  key={category}
-                  variant={selectedCategory === category ? "default" : "outline"}
+                  variant={selectedCategory === "all" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setSelectedCategory(category)}
-                  className={`flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-3 py-2 h-auto min-h-[36px] touch-manipulation ${selectedCategory === category ? "restaurant-button-accent" : ""}`}
+                  onClick={() => setSelectedCategory("all")}
+                  className={`text-xs sm:text-sm px-3 py-2 h-auto min-h-[36px] touch-manipulation ${selectedCategory === "all" ? "restaurant-button-accent" : ""}`}
                 >
-                  <Icon className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="hidden xs:inline">{category.charAt(0).toUpperCase() + category.slice(1)}</span>
-                  <span className="xs:hidden">{category.charAt(0).toUpperCase() + category.slice(1, 3)}</span>
+                  All
                 </Button>
-              );
-            })}
+                {categories.map((category) => {
+                  const Icon = categoryIcons[category as keyof typeof categoryIcons] || ChefHat;
+                  return (
+                    <Button
+                      key={category}
+                      variant={selectedCategory === category ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedCategory(category)}
+                      className={`flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-3 py-2 h-auto min-h-[36px] touch-manipulation ${selectedCategory === category ? "restaurant-button-accent" : ""}`}
+                    >
+                      <Icon className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <span className="hidden xs:inline">{category.charAt(0).toUpperCase() + category.slice(1)}</span>
+                      <span className="xs:hidden">{category.charAt(0).toUpperCase() + category.slice(1, 3)}</span>
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Dietary Filter */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Dietary Preference</p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={dietaryFilter === "all" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setDietaryFilter("all")}
+                  className={`text-xs sm:text-sm px-3 py-2 h-auto min-h-[36px] touch-manipulation ${dietaryFilter === "all" ? "restaurant-button-accent" : ""}`}
+                >
+                  All
+                </Button>
+                <Button
+                  variant={dietaryFilter === "veg" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setDietaryFilter("veg")}
+                  className={`flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-3 py-2 h-auto min-h-[36px] touch-manipulation ${dietaryFilter === "veg" ? "bg-green-500 hover:bg-green-600 text-white border-green-500" : ""}`}
+                >
+                  <div className="h-3 w-3 border-2 border-current rounded-sm flex items-center justify-center">
+                    <div className="h-1.5 w-1.5 bg-current rounded-full"></div>
+                  </div>
+                  <span>Veg</span>
+                </Button>
+                <Button
+                  variant={dietaryFilter === "non-veg" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setDietaryFilter("non-veg")}
+                  className={`flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-3 py-2 h-auto min-h-[36px] touch-manipulation ${dietaryFilter === "non-veg" ? "bg-red-500 hover:bg-red-600 text-white border-red-500" : ""}`}
+                >
+                  <div className="h-3 w-3 border-2 border-current rounded-sm flex items-center justify-center">
+                    <div className="h-0 w-0 border-l-[3px] border-l-transparent border-r-[3px] border-r-transparent border-b-[5px] border-b-current"></div>
+                  </div>
+                  <span>Non-Veg</span>
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </Card>
@@ -404,6 +490,15 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2 mb-1">
+                        <div className={`h-4 w-4 border-2 rounded-sm flex items-center justify-center flex-shrink-0 ${
+                          item.isVegetarian ? 'border-green-500' : 'border-red-500'
+                        }`}>
+                          {item.isVegetarian ? (
+                            <div className="h-1.5 w-1.5 bg-green-500 rounded-full"></div>
+                          ) : (
+                            <div className="h-0 w-0 border-l-[2.5px] border-l-transparent border-r-[2.5px] border-r-transparent border-b-[4px] border-b-red-500"></div>
+                          )}
+                        </div>
                         <h3 className="font-semibold text-base sm:text-lg truncate">{item.name}</h3>
                         <div className="flex items-center space-x-1 flex-shrink-0">
                           <Star className="h-3 w-3 sm:h-4 sm:w-4 fill-yellow-400 text-yellow-400" />
@@ -642,9 +737,9 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
        <AlertDialog open={showPaymentChoice} onOpenChange={setShowPaymentChoice}>
          <AlertDialogContent className="w-[95vw] max-w-md mx-auto max-h-[90vh] overflow-y-auto">
            <AlertDialogHeader className="pb-3">
-             <AlertDialogTitle className="text-lg">Choose Payment Method</AlertDialogTitle>
+             <AlertDialogTitle className="text-lg">Complete Your Order</AlertDialogTitle>
              <AlertDialogDescription className="text-sm">
-               Select how you'd like to pay for your order
+               Choose order type and payment method
              </AlertDialogDescription>
            </AlertDialogHeader>
 
@@ -667,11 +762,41 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
                    </p>
                  </>
                )}
-             </div>
-           ) : (
-             <div className="space-y-3">
-               {/* Prepay Option */}
-               <Button
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {/* Order Type Selection */}
+              <div className="p-3 bg-muted rounded-lg space-y-2">
+                <h4 className="font-semibold text-sm">Order Type</h4>
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={() => setOrderType('dine-in')}
+                    variant={orderType === 'dine-in' ? 'default' : 'outline'}
+                    className={`flex-1 h-auto p-3 ${orderType === 'dine-in' ? 'restaurant-gradient-accent text-white' : ''}`}
+                  >
+                    <div className="text-center">
+                      <Utensils className="h-5 w-5 mx-auto mb-1" />
+                      <p className="text-xs font-medium">Dine-In</p>
+                    </div>
+                  </Button>
+                  <Button
+                    onClick={() => setOrderType('takeaway')}
+                    variant={orderType === 'takeaway' ? 'default' : 'outline'}
+                    className={`flex-1 h-auto p-3 ${orderType === 'takeaway' ? 'restaurant-gradient-accent text-white' : ''}`}
+                  >
+                    <div className="text-center">
+                      <ShoppingCart className="h-5 w-5 mx-auto mb-1" />
+                      <p className="text-xs font-medium">Takeaway</p>
+                    </div>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Payment Method Section */}
+              <h4 className="font-semibold text-sm mt-4">Payment Method</h4>
+
+              {/* Prepay Option */}
+              <Button
                  onClick={() => placeOrderWithPaymentMethod('prepay')}
                  className="w-full h-auto p-3 flex items-start space-x-3 hover:bg-accent hover:text-accent-foreground"
                  variant="outline"

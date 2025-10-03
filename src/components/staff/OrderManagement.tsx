@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, CheckCircle, AlertTriangle, Users } from "lucide-react";
+import { Clock, CheckCircle, AlertTriangle, Users, X } from "lucide-react";
 import { orderAPI } from "@/lib/api";
 import { getSocket, joinStaffRoom, onNewOrder, onOrderStatusUpdate, onOrderPaid } from "@/lib/socket";
 import { useToast } from "@/hooks/use-toast";
@@ -11,6 +11,7 @@ interface Order {
   id: string;
   orderNumber: string;
   status: string;
+  orderType?: string;
   totalAmount: number;
   serviceCharge: number;
   gst: number;
@@ -172,6 +173,71 @@ export const OrderManagement = () => {
     }
   };
 
+  const cancelOrder = async (orderId: string) => {
+    // Confirm cancellation
+    if (!confirm("Are you sure you want to cancel this order?")) {
+      return;
+    }
+
+    try {
+      await orderAPI.cancelOrder(orderId);
+      // Remove from list or update status
+      setOrders(orders.map(order => 
+        order.id === orderId 
+          ? { ...order, status: 'cancelled' }
+          : order
+      ));
+      toast({
+        title: "Order Cancelled",
+        description: "The order has been cancelled successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to cancel order",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const removeOrderItem = async (orderId: string, itemId: string, itemName: string) => {
+    // Confirm removal
+    if (!confirm(`Remove "${itemName}" from this order?`)) {
+      return;
+    }
+
+    try {
+      const result = await orderAPI.removeOrderItem(orderId, itemId);
+      
+      // Update the order in state
+      if (result.order.status === 'cancelled') {
+        // Order was cancelled because last item was removed
+        setOrders(orders.map(order => 
+          order.id === orderId ? result.order : order
+        ));
+        toast({
+          title: "Order Cancelled",
+          description: "Last item removed. Order has been cancelled.",
+        });
+      } else {
+        // Update order with new totals
+        setOrders(orders.map(order => 
+          order.id === orderId ? result.order : order
+        ));
+        toast({
+          title: "Item Removed",
+          description: `"${itemName}" has been removed from the order`,
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove item",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getStatusSummary = () => {
     return orders.reduce(
       (acc, order) => {
@@ -193,9 +259,50 @@ export const OrderManagement = () => {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <Card className="restaurant-card text-center py-12">
-          <p className="text-muted-foreground">Loading orders...</p>
-        </Card>
+        {/* Status Overview Skeleton */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="restaurant-card">
+              <div className="flex items-center space-x-3">
+                <div className="h-10 w-10 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-lg animate-shimmer bg-[length:200%_100%]" />
+                <div className="space-y-2 flex-1">
+                  <div className="h-8 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-16 animate-shimmer bg-[length:200%_100%]" />
+                  <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-20 animate-shimmer bg-[length:200%_100%]" />
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        {/* Orders List Skeleton */}
+        <div>
+          <div className="h-6 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-32 mb-4 animate-shimmer bg-[length:200%_100%]" />
+          
+          <div className="grid gap-4">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="restaurant-card">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-2 flex-1">
+                      <div className="h-6 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-1/3 animate-shimmer bg-[length:200%_100%]" />
+                      <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-1/4 animate-shimmer bg-[length:200%_100%]" />
+                    </div>
+                    <div className="h-8 w-24 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-full animate-shimmer bg-[length:200%_100%]" />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="h-5 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-20 animate-shimmer bg-[length:200%_100%]" />
+                    {[1, 2].map((j) => (
+                      <div key={j} className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-full animate-shimmer bg-[length:200%_100%]" />
+                    ))}
+                  </div>
+                  
+                  <div className="h-10 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded animate-shimmer bg-[length:200%_100%]" />
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -263,6 +370,12 @@ export const OrderManagement = () => {
                         <span className="font-medium">{formatTime(order.createdAt)}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Type:</span>
+                        <Badge variant="outline" className="capitalize">
+                          {order.orderType === 'takeaway' ? '🛍️ Takeaway' : '🍽️ Dine-In'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Amount:</span>
                         <span className="font-medium">₹{order.grandTotal}</span>
                       </div>
@@ -283,13 +396,28 @@ export const OrderManagement = () => {
                     </div>
 
                     {/* Order Items */}
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       <h4 className="font-medium text-sm">Items:</h4>
                       {order.orderItems.map((item) => (
-                        <div key={item.id} className="flex justify-between text-sm">
-                          <span>{item.quantity}x {item.menuItem.name}</span>
-                          {item.notes && (
-                            <span className="text-muted-foreground italic">({item.notes})</span>
+                        <div key={item.id} className="flex items-center justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 text-sm">
+                              <span className="font-medium">{item.quantity}x</span>
+                              <span className="truncate">{item.menuItem.name}</span>
+                            </div>
+                            {item.notes && (
+                              <span className="text-xs text-muted-foreground italic">({item.notes})</span>
+                            )}
+                          </div>
+                          {(order.status === "pending" || order.status === "paid") && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeOrderItem(order.id, item.id, item.menuItem.name)}
+                              className="h-7 w-7 p-0 hover:bg-destructive hover:text-destructive-foreground flex-shrink-0"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
                           )}
                         </div>
                       ))}
@@ -307,6 +435,15 @@ export const OrderManagement = () => {
                           } text-white`}
                         >
                           {config.buttonLabel}
+                        </Button>
+                      )}
+                      {(order.status === "pending" || order.status === "paid") && (
+                        <Button
+                          onClick={() => cancelOrder(order.id)}
+                          variant="destructive"
+                          className="flex-shrink-0"
+                        >
+                          Cancel
                         </Button>
                       )}
                     </div>

@@ -20,24 +20,26 @@ model Staff {
 }
 
 model MenuItem {
-  id          String      @id @default(auto()) @map("_id") @db.ObjectId
-  name        String
-  category    String
-  price       Int
-  description String
-  prepTime    Int
-  rating      Float       @default(4.0)
-  isAvailable Boolean     @default(true)
-  image       String?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  orderItems  OrderItem[]
+  id           String      @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  category     String
+  price        Int
+  description  String
+  prepTime     Int
+  rating       Float       @default(4.0)
+  isAvailable  Boolean     @default(true)
+  isVegetarian Boolean     @default(true) // true for veg, false for non-veg
+  image        String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  orderItems   OrderItem[]
 }
 
 model Order {
   id             String      @id @default(auto()) @map("_id") @db.ObjectId
   orderNumber    String      @unique
   status         String      @default("pending") // pending, paid, preparing, ready, served, cancelled
+  orderType      String      @default("dine-in") // dine-in or takeaway
   totalAmount    Int
   serviceCharge  Int
   gst            Int

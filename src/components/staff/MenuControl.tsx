@@ -110,9 +110,53 @@ export const MenuControl = () => {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <Card className="restaurant-card text-center py-12">
-          <p className="text-muted-foreground">Loading menu items...</p>
+        {/* Statistics Skeleton */}
+        <div className="grid grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="restaurant-card">
+              <div className="text-center space-y-2">
+                <div className="h-8 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-16 mx-auto animate-shimmer bg-[length:200%_100%]" />
+                <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-20 mx-auto animate-shimmer bg-[length:200%_100%]" />
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        {/* Search and Filter Skeleton */}
+        <Card className="restaurant-card">
+          <div className="space-y-4">
+            <div className="h-10 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-md animate-shimmer bg-[length:200%_100%]" />
+            <div className="flex flex-wrap gap-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-9 w-24 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-md animate-shimmer bg-[length:200%_100%]" />
+              ))}
+            </div>
+          </div>
         </Card>
+
+        {/* Menu Items Skeleton */}
+        <div className="grid gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="restaurant-card">
+              <div className="space-y-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-3 flex-1">
+                    <div className="h-12 w-12 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-lg animate-shimmer bg-[length:200%_100%]" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-5 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-3/4 animate-shimmer bg-[length:200%_100%]" />
+                      <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-full animate-shimmer bg-[length:200%_100%]" />
+                      <div className="flex space-x-4">
+                        <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-16 animate-shimmer bg-[length:200%_100%]" />
+                        <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-16 animate-shimmer bg-[length:200%_100%]" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="h-10 w-20 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded animate-shimmer bg-[length:200%_100%]" />
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }

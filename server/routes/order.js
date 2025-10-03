@@ -18,7 +18,7 @@ const generateOrderNumber = () => {
 // Create new order (public - for customers)
 router.post('/', async (req, res) => {
   try {
-    const { items, customerEmail, customerPhone, paymentMethod } = req.body;
+    const { items, customerEmail, customerPhone, paymentMethod, orderType } = req.body;
 
     if (!items || items.length === 0) {
       return res.status(400).json({ error: 'Order must contain at least one item' });
@@ -60,6 +60,7 @@ router.post('/', async (req, res) => {
     const order = await prisma.order.create({
       data: {
         orderNumber: generateOrderNumber(),
+        orderType: orderType || 'dine-in', // Default to dine-in if not specified
         totalAmount,
         serviceCharge,
         gst,
@@ -289,7 +290,7 @@ router.post('/:id/create-payment', async (req, res) => {
 // Verify prepayment and CREATE order (only after payment succeeds)
 router.post('/verify-prepayment', async (req, res) => {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, items } = req.body;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, items, orderType } = req.body;
 
     console.log('🔍 Verify prepayment called:', {
       razorpay_order_id,
@@ -355,6 +356,7 @@ router.post('/verify-prepayment', async (req, res) => {
     const order = await prisma.order.create({
       data: {
         orderNumber: generateOrderNumber(),
+        orderType: orderType || 'dine-in', // Default to dine-in if not specified
         totalAmount,
         serviceCharge,
         gst,
@@ -505,6 +507,122 @@ router.post('/:id/cancel', async (req, res) => {
   } catch (error) {
     console.error('Error cancelling order:', error);
     res.status(500).json({ error: 'Failed to cancel order' });
+  }
+});
+
+// Remove individual item from order (staff only)
+router.delete('/:orderId/items/:itemId', authenticateToken, async (req, res) => {
+  try {
+    const { orderId, itemId } = req.params;
+
+    // Get the order first
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        orderItems: {
+          include: {
+            menuItem: true,
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    // Check if order can be modified (not served or cancelled)
+    if (order.status === 'served' || order.status === 'cancelled') {
+      return res.status(400).json({ error: 'Cannot modify completed or cancelled orders' });
+    }
+
+    // Find the item to remove
+    const itemToRemove = order.orderItems.find(item => item.id === itemId);
+    if (!itemToRemove) {
+      return res.status(404).json({ error: 'Item not found in order' });
+    }
+
+    // Delete the order item
+    await prisma.orderItem.delete({
+      where: { id: itemId },
+    });
+
+    // Get remaining items
+    const remainingItems = order.orderItems.filter(item => item.id !== itemId);
+
+    // If no items left, cancel the order
+    if (remainingItems.length === 0) {
+      const cancelledOrder = await prisma.order.update({
+        where: { id: orderId },
+        data: { status: 'cancelled' },
+        include: {
+          orderItems: {
+            include: {
+              menuItem: true,
+            },
+          },
+        },
+      });
+
+      // Emit socket event
+      const io = req.app.get('io');
+      io.to('staff').emit('order:cancelled', { orderId, order: cancelledOrder });
+      io.to(`customer:${orderId}`).emit('order:statusUpdate', { 
+        orderId, 
+        status: 'cancelled', 
+        order: cancelledOrder 
+      });
+
+      return res.json({ 
+        message: 'Last item removed, order cancelled',
+        order: cancelledOrder 
+      });
+    }
+
+    // Recalculate totals
+    let newTotalAmount = 0;
+    remainingItems.forEach(item => {
+      newTotalAmount += item.price * item.quantity;
+    });
+
+    const newServiceCharge = Math.round(newTotalAmount * 0.05);
+    const newGst = Math.round(newTotalAmount * 0.18);
+    const newGrandTotal = newTotalAmount + newServiceCharge + newGst;
+
+    // Update order with new totals
+    const updatedOrder = await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        totalAmount: newTotalAmount,
+        serviceCharge: newServiceCharge,
+        gst: newGst,
+        grandTotal: newGrandTotal,
+      },
+      include: {
+        orderItems: {
+          include: {
+            menuItem: true,
+          },
+        },
+      },
+    });
+
+    // Emit socket event
+    const io = req.app.get('io');
+    io.to('staff').emit('order:itemRemoved', { orderId, itemId, order: updatedOrder });
+    io.to(`customer:${orderId}`).emit('order:statusUpdate', { 
+      orderId, 
+      status: updatedOrder.status, 
+      order: updatedOrder 
+    });
+
+    res.json({ 
+      message: 'Item removed successfully',
+      order: updatedOrder 
+    });
+  } catch (error) {
+    console.error('Error removing order item:', error);
+    res.status(500).json({ error: 'Failed to remove item from order' });
   }
 });
 
