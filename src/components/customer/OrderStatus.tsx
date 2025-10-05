@@ -6,7 +6,35 @@ import { getSocket, joinCustomerRoom, onOrderStatusUpdate } from "@/lib/socket";
 import { orderAPI } from "@/lib/api";
 
 interface OrderStatusProps {
-  currentOrder: any;
+  currentOrder: {
+    id: string;
+    orderNumber: string;
+    status: string;
+    grandTotal: number;
+    totalAmount: number;
+    serviceCharge: number;
+    gst: number;
+    orderType: string;
+    items: Array<{
+      id: string;
+      name: string;
+      quantity: number;
+      price: number;
+    }>;
+    orderItems: Array<{
+      id: string;
+      quantity: number;
+      price: number;
+      menuItem: {
+        id: string;
+        name: string;
+        prepTime: number;
+        price: number;
+      };
+    }>;
+    createdAt: string;
+    updatedAt: string;
+  } | null;
   orderId: string | null;
 }
 
@@ -80,7 +108,7 @@ export const OrderStatus = ({ currentOrder, orderId }: OrderStatusProps) => {
     }
     if (currentOrder.status === "preparing") {
       // Calculate based on items
-      const avgPrepTime = currentOrder.orderItems.reduce((total: number, item: any) => 
+      const avgPrepTime = currentOrder.orderItems.reduce((total: number, item: { menuItem: { prepTime: number } }) => 
         total + item.menuItem.prepTime, 0
       ) / currentOrder.orderItems.length;
       return `${Math.ceil(avgPrepTime)}-${Math.ceil(avgPrepTime + 5)} minutes`;
@@ -198,7 +226,7 @@ export const OrderStatus = ({ currentOrder, orderId }: OrderStatusProps) => {
           </div>
 
           <div className="space-y-2">
-            {currentOrder.orderItems.map((item: any) => (
+            {currentOrder.orderItems.map((item: { id: string; quantity: number; menuItem: { name: string } }) => (
               <div key={item.id} className="flex justify-between text-sm">
                 <span>{item.quantity}x {item.menuItem.name}</span>
                 <span className="font-medium">₹{item.price * item.quantity}</span>
@@ -239,50 +267,94 @@ export const OrderStatus = ({ currentOrder, orderId }: OrderStatusProps) => {
       {/* Progress Timeline */}
       <Card className="restaurant-card">
         <div className="space-y-6">
-          <h3 className="text-lg font-semibold">Order Progress</h3>
+          <div className="space-y-4">
+            <div className="text-center">
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Order Progress</h3>
+              <p className="text-sm text-gray-600">Track your order status in real-time</p>
+            </div>
+            
+            {/* Progress Bar */}
+            <div className="px-4">
+              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden shadow-inner">
+                <div 
+                  className="h-3 bg-gradient-to-r from-green-500 to-blue-500 rounded-full transition-all duration-1000 ease-out shadow-sm"
+                  style={{ 
+                    width: `${(() => {
+                      if (!currentOrder) return 0;
+                      const currentIndex = statusSteps.findIndex(step => step.id === currentOrder.status);
+                      return currentIndex >= 0 ? ((currentIndex + 1) / statusSteps.length) * 100 : 0;
+                    })()}%` 
+                  }}
+                ></div>
+              </div>
+              <div className="flex justify-between text-xs text-gray-500 mt-2">
+                <span className="font-medium">Started</span>
+                <span className="font-semibold text-gray-700 bg-gray-100 px-2 py-1 rounded-full">
+                  {currentOrder ? `${Math.round(((() => {
+                    const currentIndex = statusSteps.findIndex(step => step.id === currentOrder.status);
+                    return currentIndex >= 0 ? ((currentIndex + 1) / statusSteps.length) * 100 : 0;
+                  })()))}% Complete` : "0% Complete"}
+                </span>
+                <span className="font-medium">Delivered</span>
+              </div>
+            </div>
+          </div>
           
-          <div className="space-y-6">
+          <div className="space-y-4 px-2">
             {statusSteps.map((step, index) => {
               const Icon = step.icon;
               const status = getStepStatus(step.id);
               
               return (
-                <div key={step.id} className="flex items-start space-x-4">
+                <div key={step.id} className="flex items-start space-x-4 relative py-2">
                   {/* Status Icon */}
                   <div className={`
-                    flex items-center justify-center w-10 h-10 rounded-full
-                    ${status === "completed" ? "bg-status-available text-white" :
-                      status === "current" ? "bg-restaurant-orange text-white animate-pulse" :
-                      "bg-restaurant-grey-200 text-restaurant-grey-500"}
+                    flex items-center justify-center w-10 h-10 rounded-full relative
+                    ${status === "completed" ? "bg-green-500 text-white shadow-lg shadow-green-500/30" :
+                      status === "current" ? "bg-blue-500 text-white shadow-lg shadow-blue-500/30" :
+                      "bg-gray-200 text-gray-500"}
+                    transition-all duration-300
                   `}>
                     <Icon className="h-5 w-5" />
+                    {status === "current" && (
+                      <div className="absolute inset-0 rounded-full bg-blue-500 animate-ping opacity-20" style={{ animationDuration: '3s' }}></div>
+                    )}
+                    {status === "completed" && (
+                      <div className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-20" style={{ animationDuration: '3s' }}></div>
+                    )}
                   </div>
                   
                   {/* Status Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2">
-                      <h4 className={`font-semibold ${
-                        status === "current" ? "text-restaurant-orange" :
-                        status === "completed" ? "text-status-available" :
-                        "text-restaurant-grey-500"
+                  <div className="flex-1 min-w-0 flex flex-col justify-center">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <h4 className={`font-semibold text-base transition-colors duration-300 ${
+                        status === "current" ? "text-blue-600" :
+                        status === "completed" ? "text-green-600" :
+                        "text-gray-500"
                       }`}>
                         {step.label}
                       </h4>
                       {status === "current" && (
-                        <Badge variant="secondary" className="bg-restaurant-orange text-white">
-                          In Progress
+                        <Badge variant="secondary" className="bg-blue-500 text-white shadow-md">
+                          <div className="flex items-center gap-1">
+                            <div className="w-2 h-2 bg-white rounded-full animate-ping" style={{ animationDuration: '2s' }}></div>
+                            In Progress
+                          </div>
                         </Badge>
                       )}
                       {status === "completed" && (
-                        <Badge variant="secondary" className="bg-status-available text-white">
-                          Completed
+                        <Badge variant="secondary" className="bg-green-500 text-white shadow-md">
+                          <div className="flex items-center gap-1">
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
+                            {step.id === "served" ? "Done" : "Completed"}
+                          </div>
                         </Badge>
                       )}
                     </div>
-                    <p className={`text-sm mt-1 ${
-                      status === "current" ? "text-foreground" :
-                      status === "completed" ? "text-foreground" :
-                      "text-muted-foreground"
+                    <p className={`text-sm transition-colors duration-300 leading-relaxed ${
+                      status === "current" ? "text-gray-700 font-medium" :
+                      status === "completed" ? "text-gray-600" :
+                      "text-gray-400"
                     }`}>
                       {step.description}
                     </p>
@@ -290,8 +362,10 @@ export const OrderStatus = ({ currentOrder, orderId }: OrderStatusProps) => {
                   
                   {/* Timeline Connector */}
                   {index < statusSteps.length - 1 && (
-                    <div className={`absolute left-[1.25rem] mt-10 w-0.5 h-6 ${
-                      status === "completed" ? "bg-status-available" : "bg-restaurant-grey-200"
+                    <div className={`absolute left-[1.25rem] top-12 w-0.5 h-8 transition-colors duration-500 ${
+                      status === "completed" ? "bg-green-500" : 
+                      status === "current" ? "bg-gradient-to-b from-green-500 to-gray-200" :
+                      "bg-gray-200"
                     }`} style={{ marginLeft: '1.25rem' }} />
                   )}
                 </div>

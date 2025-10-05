@@ -116,6 +116,7 @@ export const MenuControl = () => {
       toast({
         title: "Success",
         description: `${item.name} is now ${newAvailability ? 'available' : 'unavailable'}`,
+        variant: "success",
       });
     } catch (error: unknown) {
       // Revert on error
@@ -176,6 +177,7 @@ export const MenuControl = () => {
       toast({
         title: "Success",
         description: `${createdItem.name} has been added to the menu`,
+        variant: "success",
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Failed to add menu item";
@@ -244,6 +246,7 @@ export const MenuControl = () => {
       toast({
         title: "Success",
         description: `${updatedItem.name} has been updated`,
+        variant: "success",
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Failed to update menu item";
@@ -268,6 +271,7 @@ export const MenuControl = () => {
       toast({
         title: "Success",
         description: `${itemName} has been deleted from the menu`,
+        variant: "success",
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Failed to delete menu item";
@@ -381,13 +385,13 @@ export const MenuControl = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search menu items..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search menu items..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
             </div>
             <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
               <DialogTrigger asChild>
@@ -638,30 +642,30 @@ export const MenuControl = () => {
             {/* Category Filter */}
             <div>
               <p className="text-xs text-muted-foreground mb-2">Categories</p>
-              <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={selectedCategory === "all" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedCategory("all")}
+              className={selectedCategory === "all" ? "restaurant-button-accent" : ""}
+            >
+              All Categories
+            </Button>
+            {categories.map((category) => {
+              const Icon = categoryIcons[category as keyof typeof categoryIcons] || ChefHat;
+              return (
                 <Button
-                  variant={selectedCategory === "all" ? "default" : "outline"}
+                  key={category}
+                  variant={selectedCategory === category ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setSelectedCategory("all")}
-                  className={selectedCategory === "all" ? "restaurant-button-accent" : ""}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`flex items-center gap-2 ${selectedCategory === category ? "restaurant-button-accent" : ""}`}
                 >
-                  All Categories
+                  <Icon className="h-4 w-4" />
+                  {category.charAt(0).toUpperCase() + category.slice(1)}
                 </Button>
-                {categories.map((category) => {
-                  const Icon = categoryIcons[category as keyof typeof categoryIcons] || ChefHat;
-                  return (
-                    <Button
-                      key={category}
-                      variant={selectedCategory === category ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSelectedCategory(category)}
-                      className={`flex items-center gap-2 ${selectedCategory === category ? "restaurant-button-accent" : ""}`}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {category.charAt(0).toUpperCase() + category.slice(1)}
-                    </Button>
-                  );
-                })}
+              );
+            })}
               </div>
             </div>
 
@@ -705,102 +709,236 @@ export const MenuControl = () => {
         </div>
       </Card>
 
-      {/* Menu Items */}
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* Menu Items - Staff Management View */}
+      <div className="space-y-3">
+        {/* Desktop Table View */}
+        <div className="hidden md:block">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-restaurant-grey-50 rounded-lg">
+                  <th className="text-left p-3 text-sm font-medium text-muted-foreground w-[31%]">Item Details</th>
+                  <th className="text-center p-3 text-sm font-medium text-muted-foreground w-[12%]">Category</th>
+                  <th className="text-center p-3 text-sm font-medium text-muted-foreground w-[8%]">Price</th>
+                  <th className="text-center p-3 text-sm font-medium text-muted-foreground w-[8%]">Time</th>
+                  <th className="text-left p-3 text-sm font-medium text-muted-foreground w-[18%]">Tags</th>
+                  <th className="text-center p-3 text-sm font-medium text-muted-foreground w-[8%]">Status</th>
+                  <th className="text-center p-3 text-sm font-medium text-muted-foreground w-[15%]">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredItems.map((item) => {
+                  const Icon = categoryIcons[item.category as keyof typeof categoryIcons] || ChefHat;
+                  
+                  return (
+                    <tr key={item.id} className="border-b border-restaurant-grey-100 hover:bg-restaurant-grey-25 transition-colors">
+                      {/* Item Details */}
+                      <td className="p-3">
+                        <div className="flex items-center space-x-3">
+                          <div className="p-2 bg-restaurant-grey-100 rounded-lg flex-shrink-0">
+                            <Icon className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <div className={`h-3 w-3 border rounded-sm flex items-center justify-center flex-shrink-0 ${
+                                item.isVegetarian ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'
+                              }`}>
+                                {item.isVegetarian ? (
+                                  <div className="h-1 w-1 bg-green-500 rounded-full"></div>
+                                ) : (
+                                  <div className="h-0 w-0 border-l-[1.5px] border-l-transparent border-r-[1.5px] border-r-transparent border-b-[2px] border-b-red-500"></div>
+                                )}
+                              </div>
+                              <h3 className="font-semibold text-sm truncate">{item.name}</h3>
+                            </div>
+                            <p className="text-xs text-muted-foreground line-clamp-1">{item.description}</p>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Category */}
+                      <td className="p-3 text-center">
+                        <Badge variant="outline" className="capitalize text-xs px-2">
+                          {item.category}
+                        </Badge>
+                      </td>
+
+                      {/* Price */}
+                      <td className="p-3 text-center">
+                        <span className="font-semibold text-sm text-primary">₹{item.price}</span>
+                      </td>
+
+                      {/* Prep Time */}
+                      <td className="p-3 text-center">
+                        <span className="text-xs font-medium text-muted-foreground">{item.prepTime}m</span>
+                      </td>
+
+                      {/* Tags */}
+                      <td className="p-3">
+                        <div className="flex flex-wrap gap-1">
+                          {item.tags && item.tags.length > 0 ? (
+                            item.tags.slice(0, 2).map((tag) => {
+                              const tagConfig = availableTags.find(t => t.value === tag);
+                              return tagConfig ? (
+                                <Badge 
+                                  key={tag} 
+                                  className={`${tagConfig.color} text-white text-xs px-1.5 py-0.5`}
+                                >
+                                  {tagConfig.label}
+                                </Badge>
+                              ) : null;
+                            })
+                          ) : (
+                            <span className="text-xs text-muted-foreground">No tags</span>
+                          )}
+                          {item.tags && item.tags.length > 2 && (
+                            <Badge variant="outline" className="text-xs px-1.5 py-0.5">
+                              +{item.tags.length - 2}
+                            </Badge>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td className="p-3 text-center">
+                        <Badge 
+                          variant={item.isAvailable ? "default" : "secondary"}
+                          className={`text-xs ${item.isAvailable ? "bg-status-available text-white" : "bg-restaurant-grey-300"}`}
+                        >
+                          {item.isAvailable ? "Live" : "Off"}
+                        </Badge>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="p-3">
+                        <div className="flex items-center justify-center space-x-1">
+                     <Switch
+                       checked={item.isAvailable}
+                       onCheckedChange={() => toggleItemAvailability(item.id)}
+                       className="data-[state=checked]:bg-status-available"
+                     />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditDialog(item)}
+                            className="h-7 w-7 p-0 hover:bg-primary hover:text-primary-foreground"
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteMenuItem(item.id, item.name)}
+                            className="h-7 w-7 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="md:hidden space-y-3">
         {filteredItems.map((item) => {
           const Icon = categoryIcons[item.category as keyof typeof categoryIcons] || ChefHat;
           
           return (
             <Card key={item.id} className="restaurant-card">
-              <div className="space-y-4">
-                {/* Item Header */}
+                <div className="p-4 space-y-3">
                 <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3 flex-1 min-w-0">
-                    <div className="p-2 bg-restaurant-grey-100 rounded-lg flex-shrink-0">
-                      <Icon className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <div className={`h-4 w-4 border-2 rounded-sm flex items-center justify-center flex-shrink-0 ${
-                          item.isVegetarian ? 'border-green-500' : 'border-red-500'
-                        }`}>
-                          {item.isVegetarian ? (
-                            <div className="h-1.5 w-1.5 bg-green-500 rounded-full"></div>
-                          ) : (
-                            <div className="h-0 w-0 border-l-[2.5px] border-l-transparent border-r-[2.5px] border-r-transparent border-b-[4px] border-b-red-500"></div>
-                          )}
-                        </div>
-                        <h3 className="font-semibold truncate">{item.name}</h3>
+                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                      <div className="p-2 bg-restaurant-grey-100 rounded-lg flex-shrink-0">
+                        <Icon className="h-4 w-4 text-primary" />
                       </div>
-                      <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{item.description}</p>
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <span className="font-bold text-primary">₹{item.price}</span>
-                        <div className="flex items-center space-x-1 text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          <span className="text-xs">{item.prepTime} min</span>
-                        </div>
-                        <Badge variant="outline" className="capitalize text-xs">
-                          {item.category}
-                        </Badge>
-                      </div>
-                      {item.tags && item.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {item.tags.map((tag) => {
-                            const tagConfig = availableTags.find(t => t.value === tag);
-                            return tagConfig ? (
-                              <Badge 
-                                key={tag} 
-                                className={`${tagConfig.color} text-white text-xs px-2 py-0.5`}
-                              >
-                                {tagConfig.label}
-                              </Badge>
-                            ) : null;
-                          })}
-                        </div>
-                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <div className={`h-3 w-3 border rounded-sm flex items-center justify-center flex-shrink-0 ${
+                            item.isVegetarian ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'
+                          }`}>
+                            {item.isVegetarian ? (
+                              <div className="h-1 w-1 bg-green-500 rounded-full"></div>
+                            ) : (
+                              <div className="h-0 w-0 border-l-[1.5px] border-l-transparent border-r-[1.5px] border-r-transparent border-b-[2px] border-b-red-500"></div>
+                            )}
                     </div>
+                          <h3 className="font-semibold text-sm truncate">{item.name}</h3>
+                    </div>
+                        <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{item.description}</p>
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <span className="font-semibold text-sm text-primary">₹{item.price}</span>
+                          <div className="flex items-center space-x-1 text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            <span className="text-xs">{item.prepTime} min</span>
                   </div>
-                  <div className="flex items-center space-x-2 flex-shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openEditDialog(item)}
-                      className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => deleteMenuItem(item.id, item.name)}
-                      className="h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                          <Badge variant="outline" className="capitalize text-xs">
+                    {item.category}
+                  </Badge>
+                </div>
+                        {item.tags && item.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {item.tags.map((tag) => {
+                              const tagConfig = availableTags.find(t => t.value === tag);
+                              return tagConfig ? (
+                                <Badge 
+                                  key={tag} 
+                                  className={`${tagConfig.color} text-white text-xs px-1.5 py-0.5`}
+                                >
+                                  {tagConfig.label}
+                                </Badge>
+                              ) : null;
+                            })}
+                          </div>
+                        )}
+                    </div>
                   </div>
                 </div>
 
-                {/* Availability Toggle */}
+                  {/* Mobile Actions */}
                 <div className="flex items-center justify-between p-3 bg-restaurant-grey-50 rounded-lg">
                   <div className="flex items-center space-x-3">
-                    <span className="font-medium">Available Today</span>
+                      <span className="font-medium text-sm">Available Today</span>
                     <Badge 
                       variant={item.isAvailable ? "default" : "secondary"}
-                      className={item.isAvailable ? "bg-status-available text-white" : "bg-restaurant-grey-300"}
+                        className={`text-xs ${item.isAvailable ? "bg-status-available text-white" : "bg-restaurant-grey-300"}`}
                     >
-                      {item.isAvailable ? "Available" : "Unavailable"}
+                        {item.isAvailable ? "Live" : "Off"}
                     </Badge>
                   </div>
+                    <div className="flex items-center space-x-2">
                   <Switch
                     checked={item.isAvailable}
                     onCheckedChange={() => toggleItemAvailability(item.id)}
-                    className="data-[state=checked]:bg-restaurant-orange"
-                  />
+                        className="data-[state=checked]:bg-status-available"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditDialog(item)}
+                        className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteMenuItem(item.id, item.name)}
+                        className="h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                 </div>
               </div>
             </Card>
           );
         })}
+        </div>
       </div>
 
       {filteredItems.length === 0 && (

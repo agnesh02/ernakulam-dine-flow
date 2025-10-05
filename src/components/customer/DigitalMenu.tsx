@@ -182,6 +182,7 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
     if (cart.length === 0) return;
 
     setIsPlacingOrder(true);
+    await new Promise(resolve => setTimeout(resolve, 1500));
     
     try {
       // Prepare order items
@@ -196,7 +197,6 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
         
         // Close payment choice dialog first
         setShowPaymentChoice(false);
-        await new Promise(resolve => setTimeout(resolve, 300));
         
         // Debug Razorpay environment
         debugRazorpayEnvironment();
@@ -210,6 +210,7 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
           toast({
             title: "Opening Payment Gateway...",
             description: "Complete payment to place your order.",
+            variant: "info",
           });
 
           // Open payment gateway
@@ -229,7 +230,7 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
               theme: {
                 color: '#f97316',
               },
-              handler: async (response: any) => {
+              handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
                 try {
                   // Step 3: Payment successful! Create order NOW
                   console.log('💳 Razorpay payment successful, response:', response);
@@ -237,6 +238,7 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
                   toast({
                     title: "Payment Successful!",
                     description: "Creating your order...",
+                    variant: "success",
                   });
 
                   // Verify payment and create order in one call
@@ -266,6 +268,7 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
                     title: "Order Placed & Paid! 🎉",
                     description: `Your order #${createdOrder.orderNumber} is confirmed and sent to kitchen. Total: ₹${createdOrder.grandTotal}`,
                     duration: 5000,
+                    variant: "success",
                   });
                   
                   // Scroll to top
@@ -290,7 +293,7 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
                   toast({
                     title: "Payment Cancelled",
                     description: "Order was not placed. You can try again or choose Pay Later.",
-                    variant: "destructive",
+                    variant: "warning",
                   });
                   rejectPayment(new Error('Payment cancelled by user'));
                 },
@@ -320,6 +323,7 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
           title: "Order Placed Successfully! 🎉",
           description: `Your order #${createdOrder.orderNumber} has been placed. Pay after your meal is served.`,
           duration: 5000,
+          variant: "success",
         });
         
         setShowPaymentChoice(false);
@@ -483,98 +487,127 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
         </div>
       </Card>
 
-      {/* Menu Items */}
-      <div className="grid gap-3 sm:gap-4">
+      {/* Menu Items - Modern Restaurant Style */}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 pb-20">
         {filteredItems.map((item) => {
           const Icon = categoryIcons[item.category as keyof typeof categoryIcons] || ChefHat;
           const quantity = getItemQuantity(item.id);
           
           return (
-            <Card key={item.id} className="restaurant-card">
-              <div className="space-y-3 sm:space-y-4">
-                {/* Item Header */}
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
-                    <div className="p-2 sm:p-3 bg-restaurant-grey-100 rounded-lg flex-shrink-0">
-                      <Icon className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <div className={`h-4 w-4 border-2 rounded-sm flex items-center justify-center flex-shrink-0 ${
-                          item.isVegetarian ? 'border-green-500' : 'border-red-500'
-                        }`}>
-                          {item.isVegetarian ? (
-                            <div className="h-1.5 w-1.5 bg-green-500 rounded-full"></div>
-                          ) : (
-                            <div className="h-0 w-0 border-l-[2.5px] border-l-transparent border-r-[2.5px] border-r-transparent border-b-[4px] border-b-red-500"></div>
-                          )}
-                        </div>
-                        <h3 className="font-semibold text-base sm:text-lg truncate">{item.name}</h3>
-                      </div>
-                      <p className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-2">{item.description}</p>
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <span className="font-bold text-base sm:text-lg text-primary">₹{item.price}</span>
-                        <div className="flex items-center space-x-1 text-muted-foreground">
-                          <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
-                          <span className="text-xs sm:text-sm">{item.prepTime} min</span>
-                        </div>
-                        <Badge variant="outline" className="capitalize text-xs">
-                          {item.category}
-                        </Badge>
-                      </div>
-                      {item.tags && item.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mb-2">
-                          {item.tags.map((tag) => {
-                            const tagConfig = availableTags.find(t => t.value === tag);
-                            return tagConfig ? (
-                              <Badge 
-                                key={tag} 
-                                className={`${tagConfig.color} text-white text-xs px-2 py-0.5`}
-                              >
-                                {tagConfig.label}
-                              </Badge>
-                            ) : null;
-                          })}
-                        </div>
-                      )}
+            <Card 
+              key={item.id} 
+              className="group restaurant-card relative overflow-hidden bg-white hover:bg-gradient-to-b hover:from-white hover:to-restaurant-grey-25 transition-all duration-500"
+            >
+              {/* Category Badge */}
+              <div className="absolute top-2 right-2 z-10">
+                <Badge 
+                  variant="outline" 
+                  className="capitalize text-[10px] px-2 py-0.5 bg-white/90 backdrop-blur-sm border-gray-100 font-medium shadow-sm"
+                >
+                  {item.category}
+                </Badge>
+              </div>
+
+              <div className="flex flex-col h-full">
+                {/* Item Image/Icon Area */}
+                <div className="relative h-20 bg-gradient-to-br from-primary/5 via-primary/3 to-transparent">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="p-3 rounded-full bg-gradient-to-br from-primary/10 to-transparent">
+                      <Icon className="h-7 w-7 text-primary/70" />
                     </div>
                   </div>
                 </div>
 
-                {/* Add to Cart Controls */}
-                <div className="flex items-center justify-between">
-                  {quantity === 0 ? (
-                    <Button
-                      onClick={() => addToCart(item)}
-                      className="restaurant-button-accent flex-1 h-10 sm:h-11 text-sm sm:text-base touch-manipulation"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add to Order
-                    </Button>
-                  ) : (
-                    <div className="flex items-center space-x-2 sm:space-x-3 flex-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeFromCart(item.id)}
-                        className="h-8 w-8 sm:h-9 sm:w-9 p-0 touch-manipulation"
-                      >
-                        <Minus className="h-4 w-4" />
-                      </Button>
-                      <span className="font-medium text-base sm:text-lg min-w-[2rem] text-center">{quantity}</span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addToCart(item)}
-                        className="h-8 w-8 sm:h-9 sm:w-9 p-0 touch-manipulation"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                      <span className="ml-auto font-bold text-primary text-sm sm:text-base">
-                        ₹{item.price * quantity}
-                      </span>
+                <div className="flex-1 p-2.5 flex flex-col">
+                  {/* Item Name & Description */}
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      {/* Veg/Non-veg Indicator */}
+                      <div className={`h-3 w-3 rounded-sm flex items-center justify-center ${
+                        item.isVegetarian 
+                          ? 'border border-green-500 bg-green-50' 
+                          : 'border border-red-500 bg-red-50'
+                      }`}>
+                        {item.isVegetarian ? (
+                          <div className="h-1 w-1 bg-green-500 rounded-sm"></div>
+                        ) : (
+                          <div className="h-0 w-0 border-l-[1px] border-l-transparent border-r-[1px] border-r-transparent border-b-[1.5px] border-b-red-500"></div>
+                        )}
+                      </div>
+                      <h3 className="font-bold text-sm text-gray-900 group-hover:text-primary transition-colors duration-300 truncate">
+                        {item.name}
+                      </h3>
+                    </div>
+                    <p className="text-[11px] text-gray-600 line-clamp-2 leading-relaxed">
+                      {item.description}
+                    </p>
+                  </div>
+
+                  {/* Tags */}
+                  {item.tags && item.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {item.tags.map((tag) => {
+                        const tagConfig = availableTags.find(t => t.value === tag);
+                        return tagConfig ? (
+                          <Badge 
+                            key={tag} 
+                            className={`${tagConfig.color} text-white text-[10px] px-1.5 py-0.5 font-medium`}
+                          >
+                            {tagConfig.label}
+                          </Badge>
+                        ) : null;
+                      })}
                     </div>
                   )}
+
+                  {/* Spacer */}
+                  <div className="flex-1 min-h-[4px]" />
+
+                  {/* Bottom Section */}
+                  <div className="mt-2 space-y-2">
+                    {/* Price & Time */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg font-bold text-primary">₹{item.price}</span>
+                      <div className="flex items-center gap-1 text-gray-500 bg-gray-50/80 px-1.5 py-0.5 rounded-full">
+                        <Clock className="h-2.5 w-2.5" />
+                        <span className="text-[10px] font-medium">{item.prepTime}m</span>
+                      </div>
+                    </div>
+
+                     {/* Order Controls */}
+                     {quantity === 0 ? (
+                       <Button
+                         onClick={() => addToCart(item)}
+                         className="w-full h-9 font-semibold text-sm rounded-sm text-white bg-emerald-700 shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 border-0 transform hover:scale-[1.02] active:scale-[0.98]"
+                       >
+                         <Plus className="h-4 w-4" />
+                         Add to Order
+                       </Button>
+                    ) : (
+                      <div className="flex items-center justify-between bg-gray-50/80 rounded-md p-1.5">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFromCart(item.id)}
+                          className="h-5 w-5 p-0 hover:bg-red-50 hover:text-red-500 rounded-sm"
+                        >
+                          <Minus className="h-2.5 w-2.5" />
+                        </Button>
+                        <span className="font-medium text-xs text-primary w-5 text-center">{quantity}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => addToCart(item)}
+                          className="h-5 w-5 p-0 hover:bg-green-50 hover:text-green-500 rounded-sm"
+                        >
+                          <Plus className="h-2.5 w-2.5" />
+                        </Button>
+                        <span className="font-semibold text-primary text-xs ml-2">
+                          ₹{item.price * quantity}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </Card>
@@ -582,13 +615,13 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
         })}
       </div>
 
-      {/* Floating Order Summary */}
+      {/* Fixed Order Summary */}
       {cart.length > 0 && (
-        <div className="fixed bottom-4 left-4 right-4 z-50">
-          <Card className="restaurant-card bg-primary text-primary-foreground border-primary shadow-lg">
-            <div className="flex items-center justify-between">
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-t border-gray-100 shadow-lg">
+          <div className="max-w-7xl mx-auto px-4 py-2">
+            <div className="flex items-center justify-between bg-primary text-primary-foreground rounded-xl p-4">
               <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
-                <div className="p-2 bg-restaurant-white/20 rounded-lg flex-shrink-0">
+                <div className="p-2 bg-white/20 rounded-lg flex-shrink-0">
                   <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -742,8 +775,8 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
                 </Button>
               </div>
             </div>
-          </Card>
-        </div>
+            </div>
+          </div>
       )}
 
       {filteredItems.length === 0 && (

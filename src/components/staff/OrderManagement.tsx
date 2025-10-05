@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +33,7 @@ interface Order {
   updatedAt: string;
 }
 
-const statusConfig: Record<string, { label: string; color: string; icon: any; nextStatus?: string; buttonLabel?: string }> = {
+const statusConfig: Record<string, { label: string; color: string; icon: React.ComponentType<{ className?: string }>; nextStatus?: string; buttonLabel?: string }> = {
   pending: {
     label: "New Order",
     color: "bg-restaurant-orange border-restaurant-orange text-restaurant-white",
@@ -74,6 +74,23 @@ export const OrderManagement = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
+  const fetchOrders = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const fetchedOrders = await orderAPI.getAll();
+      setOrders(fetchedOrders);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to fetch orders";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
   // Fetch orders and set up Socket.io
   useEffect(() => {
     fetchOrders();
@@ -90,14 +107,19 @@ export const OrderManagement = () => {
         title: "New Order! 🔔",
         description: `Order #${order.orderNumber} received - ₹${order.grandTotal}`,
         duration: 5000,
+        variant: "info",
       });
       
       // Play notification sound (optional)
       if (typeof Audio !== 'undefined') {
         try {
           const audio = new Audio('/notification.mp3');
-          audio.play().catch(() => {});
-        } catch (e) {}
+          audio.play().catch(() => {
+            // Ignore audio play errors
+          });
+        } catch (e) {
+          // Ignore audio errors
+        }
       }
     });
 
@@ -124,29 +146,14 @@ export const OrderManagement = () => {
       toast({
         title: "Payment Received",
         description: `Order #${order.orderNumber} has been paid`,
+        variant: "success",
       });
     });
 
     return () => {
       // Clean up socket listeners
     };
-  }, [toast]);
-
-  const fetchOrders = async () => {
-    try {
-      setIsLoading(true);
-      const fetchedOrders = await orderAPI.getAll();
-      setOrders(fetchedOrders);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to fetch orders",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [toast, fetchOrders]);
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     // Optimistic update
@@ -162,12 +169,13 @@ export const OrderManagement = () => {
         title: "Status Updated",
         description: `Order status updated to ${statusConfig[newStatus]?.label}`,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to update order status";
       // Revert on error
       fetchOrders();
       toast({
         title: "Error",
-        description: error.message || "Failed to update order status",
+        description: message,
         variant: "destructive",
       });
     }
@@ -191,10 +199,11 @@ export const OrderManagement = () => {
         title: "Order Cancelled",
         description: "The order has been cancelled successfully",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to cancel order";
       toast({
         title: "Error",
-        description: error.message || "Failed to cancel order",
+        description: message,
         variant: "destructive",
       });
     }
@@ -229,10 +238,11 @@ export const OrderManagement = () => {
           description: `"${itemName}" has been removed from the order`,
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to remove item";
       toast({
         title: "Error",
-        description: error.message || "Failed to remove item",
+        description: message,
         variant: "destructive",
       });
     }

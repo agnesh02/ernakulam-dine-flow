@@ -10,12 +10,48 @@ import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 
 export const CustomerApp = () => {
-  const [cart, setCart] = useState<any[]>(() => {
+  const [cart, setCart] = useState<Array<{
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    prepTime: number;
+    isVegetarian: boolean;
+    tags?: string[];
+  }>>(() => {
     // Restore cart from localStorage on mount
     const savedCart = localStorage.getItem('customerCart');
     return savedCart ? JSON.parse(savedCart) : [];
   });
-  const [currentOrder, setCurrentOrder] = useState<any>(null);
+  const [currentOrder, setCurrentOrder] = useState<{
+    id: string;
+    orderNumber: string;
+    status: string;
+    grandTotal: number;
+    totalAmount: number;
+    serviceCharge: number;
+    gst: number;
+    orderType: string;
+    items: Array<{
+      id: string;
+      name: string;
+      quantity: number;
+      price: number;
+    }>;
+    orderItems: Array<{
+      id: string;
+      quantity: number;
+      price: number;
+      menuItem: {
+        id: string;
+        name: string;
+        prepTime: number;
+        price: number;
+      };
+    }>;
+    createdAt: string;
+    updatedAt: string;
+  } | null>(null);
   const [activeTab, setActiveTab] = useState("menu");
   const [orderId, setOrderId] = useState<string | null>(() => {
     // Restore orderId from localStorage on mount
@@ -119,7 +155,35 @@ export const CustomerApp = () => {
     }
   }, [orderId]);
 
-  const handleOrderPlaced = (order: any) => {
+  const handleOrderPlaced = (order: {
+    id: string;
+    orderNumber: string;
+    status: string;
+    grandTotal: number;
+    totalAmount: number;
+    serviceCharge: number;
+    gst: number;
+    orderType: string;
+    items: Array<{
+      id: string;
+      name: string;
+      quantity: number;
+      price: number;
+    }>;
+    orderItems: Array<{
+      id: string;
+      quantity: number;
+      price: number;
+      menuItem: {
+        id: string;
+        name: string;
+        prepTime: number;
+        price: number;
+      };
+    }>;
+    createdAt: string;
+    updatedAt: string;
+  }) => {
     setOrderId(order.id);
     setCurrentOrder(order);
     setCart([]); // Clear cart after placing order
@@ -199,16 +263,55 @@ export const CustomerApp = () => {
           </TabsTrigger>
           <TabsTrigger 
             value="status" 
-            className={`flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground py-3 px-2 text-xs sm:text-sm touch-manipulation ${
+            className={`flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground py-3 px-2 text-xs sm:text-sm touch-manipulation relative ${
               currentOrder ? "relative" : ""
             }`}
           >
-            <Clock className="h-4 w-4" />
-            <span className="hidden xs:inline">Order Status</span>
-            <span className="xs:hidden">Status</span>
-            {currentOrder && currentOrder.status !== "served" && (
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full animate-pulse"></div>
-            )}
+            <div className="relative">
+              <Clock className={`h-4 w-4 ${
+                currentOrder?.status === "preparing" ? "text-blue-500" :
+                currentOrder?.status === "ready" ? "text-green-500" :
+                currentOrder?.status === "served" ? "text-gray-500" :
+                currentOrder?.status === "paid" ? "text-emerald-500" :
+                "text-orange-500"
+              }`} />
+              {currentOrder && currentOrder.status !== "served" && (
+                <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse ${
+                  currentOrder.status === "preparing" ? "bg-blue-500" :
+                  currentOrder.status === "ready" ? "bg-green-500" :
+                  currentOrder.status === "paid" ? "bg-emerald-500" :
+                  "bg-orange-500"
+                }`} style={{ animationDuration: '2s' }}></div>
+              )}
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="hidden xs:inline">Order Status</span>
+              <span className="xs:hidden">Status</span>
+              {currentOrder && (
+                <div className="flex items-center gap-1 mt-0.5">
+                  <div className={`w-2 h-2 rounded-full ${
+                    currentOrder.status === "preparing" ? "bg-blue-500" :
+                    currentOrder.status === "ready" ? "bg-green-500" :
+                    currentOrder.status === "served" ? "bg-gray-500" :
+                    currentOrder.status === "paid" ? "bg-emerald-500" :
+                    "bg-orange-500"
+                  }`}></div>
+                  <span className={`text-[10px] font-medium ${
+                    currentOrder.status === "preparing" ? "text-blue-600" :
+                    currentOrder.status === "ready" ? "text-green-600" :
+                    currentOrder.status === "served" ? "text-gray-600" :
+                    currentOrder.status === "paid" ? "text-emerald-600" :
+                    "text-orange-600"
+                  }`}>
+                    {currentOrder.status === "pending" ? "New" :
+                     currentOrder.status === "paid" ? "Paid" :
+                     currentOrder.status === "preparing" ? "Cooking" :
+                     currentOrder.status === "ready" ? "Ready" :
+                     currentOrder.status === "served" ? "Done" : "Active"}
+                  </span>
+                </div>
+              )}
+            </div>
           </TabsTrigger>
           <TabsTrigger 
             value="payment" 
