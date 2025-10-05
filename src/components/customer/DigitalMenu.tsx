@@ -31,7 +31,6 @@ import {
   Coffee,
   Salad,
   Dessert,
-  Star,
   X,
   CreditCard,
   Wallet,
@@ -47,11 +46,22 @@ interface MenuItem {
   price: number;
   description: string;
   prepTime: number;
-  rating: number;
+  tags?: string[];
   isAvailable: boolean;
   isVegetarian: boolean;
   image?: string;
 }
+
+const availableTags = [
+  { value: "bestseller", label: "Best Seller", color: "bg-orange-500" },
+  { value: "spicy", label: "Spicy", color: "bg-red-500" },
+  { value: "chefs-special", label: "Chef's Special", color: "bg-purple-500" },
+  { value: "new", label: "New", color: "bg-blue-500" },
+  { value: "healthy", label: "Healthy", color: "bg-green-600" },
+  { value: "signature", label: "Signature Dish", color: "bg-amber-600" },
+  { value: "value", label: "Value", color: "bg-teal-500" },
+  { value: "premium", label: "Premium", color: "bg-yellow-600" },
+];
 
 interface OrderItem extends MenuItem {
   quantity: number;
@@ -500,22 +510,33 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
                           )}
                         </div>
                         <h3 className="font-semibold text-base sm:text-lg truncate">{item.name}</h3>
-                        <div className="flex items-center space-x-1 flex-shrink-0">
-                          <Star className="h-3 w-3 sm:h-4 sm:w-4 fill-yellow-400 text-yellow-400" />
-                          <span className="text-xs sm:text-sm font-medium">{item.rating}</span>
-                        </div>
                       </div>
                       <p className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-2">{item.description}</p>
-                      <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
                         <span className="font-bold text-base sm:text-lg text-primary">₹{item.price}</span>
                         <div className="flex items-center space-x-1 text-muted-foreground">
                           <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
                           <span className="text-xs sm:text-sm">{item.prepTime} min</span>
                         </div>
-                        <Badge variant="outline" className="capitalize text-xs w-fit">
+                        <Badge variant="outline" className="capitalize text-xs">
                           {item.category}
                         </Badge>
                       </div>
+                      {item.tags && item.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {item.tags.map((tag) => {
+                            const tagConfig = availableTags.find(t => t.value === tag);
+                            return tagConfig ? (
+                              <Badge 
+                                key={tag} 
+                                className={`${tagConfig.color} text-white text-xs px-2 py-0.5`}
+                              >
+                                {tagConfig.label}
+                              </Badge>
+                            ) : null;
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

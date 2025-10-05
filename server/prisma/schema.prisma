@@ -26,7 +26,7 @@ model MenuItem {
   price        Int
   description  String
   prepTime     Int
-  rating       Float       @default(4.0)
+  tags         String[]    @default([]) // Array of tag strings
   isAvailable  Boolean     @default(true)
   isVegetarian Boolean     @default(true) // true for veg, false for non-veg
   image        String?

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Lock, Delete } from "lucide-react";
+import { Lock, Delete, Loader2 } from "lucide-react";
 import { authAPI } from "@/lib/api";
 
 interface PinLoginProps {
@@ -75,6 +75,15 @@ export const PinLogin = ({ onLogin }: PinLoginProps) => {
         {error && (
           <div className="text-center mb-4">
             <p className="text-destructive text-sm">{error}</p>
+          </div>
+        )}
+
+        {isLoading && (
+          <div className="text-center mb-4">
+            <div className="flex items-center justify-center space-x-2 text-primary">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <p className="text-sm font-medium">Signing in...</p>
+            </div>
           </div>
         )}
 

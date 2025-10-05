@@ -39,10 +39,7 @@ export const BillPayment = ({ currentOrder, orderId }: BillPaymentProps) => {
     setPaymentStatus("processing");
     
     try {
-      // Simulate payment processing delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Mark order as paid via API
+      // Mark order as paid via API (includes 2-second delay for UX)
       await orderAPI.markPaid(orderId, method);
       
       setPaymentStatus("completed");

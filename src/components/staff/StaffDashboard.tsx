@@ -22,7 +22,7 @@ export const StaffDashboard = () => {
       </div>
 
       <Tabs defaultValue="orders" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-4 sm:mb-6 h-auto">
+        <TabsList className="grid w-full grid-cols-3 mb-4 sm:mb-6 h-auto">
           {/* TABLE MANAGEMENT TEMPORARILY DISABLED */}
           {/* <TabsTrigger 
             value="tables" 
@@ -34,7 +34,7 @@ export const StaffDashboard = () => {
           </TabsTrigger> */}
           <TabsTrigger 
             value="orders" 
-            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground py-3 px-2 text-xs sm:text-sm touch-manipulation"
+            className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground py-3 px-3 text-xs sm:text-sm touch-manipulation"
           >
             <ClipboardList className="h-4 w-4" />
             <span className="hidden xs:inline">Orders</span>
@@ -42,7 +42,7 @@ export const StaffDashboard = () => {
           </TabsTrigger>
           <TabsTrigger 
             value="menu" 
-            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground py-3 px-2 text-xs sm:text-sm touch-manipulation"
+            className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground py-3 px-3 text-xs sm:text-sm touch-manipulation"
           >
             <Menu className="h-4 w-4" />
             <span className="hidden xs:inline">Menu</span>
@@ -50,7 +50,7 @@ export const StaffDashboard = () => {
           </TabsTrigger>
           <TabsTrigger 
             value="history" 
-            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground py-3 px-2 text-xs sm:text-sm touch-manipulation"
+            className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground py-3 px-3 text-xs sm:text-sm touch-manipulation"
           >
             <History className="h-4 w-4" />
             <span className="hidden xs:inline">History</span>

@@ -64,7 +64,7 @@ router.patch('/:id/availability', authenticateToken, async (req, res) => {
 // Create menu item (staff only)
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { name, category, price, description, prepTime, rating, isAvailable, image } = req.body;
+    const { name, category, price, description, prepTime, tags, isAvailable, isVegetarian, image } = req.body;
 
     const menuItem = await prisma.menuItem.create({
       data: {
@@ -73,8 +73,9 @@ router.post('/', authenticateToken, async (req, res) => {
         price,
         description,
         prepTime,
-        rating: rating || 4.0,
+        tags: tags || [],
         isAvailable: isAvailable !== undefined ? isAvailable : true,
+        isVegetarian: isVegetarian !== undefined ? isVegetarian : true,
         image,
       },
     });
@@ -90,7 +91,7 @@ router.post('/', authenticateToken, async (req, res) => {
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, category, price, description, prepTime, rating, isAvailable, image } = req.body;
+    const { name, category, price, description, prepTime, tags, isAvailable, isVegetarian, image } = req.body;
 
     const updatedItem = await prisma.menuItem.update({
       where: { id },
@@ -100,8 +101,9 @@ router.put('/:id', authenticateToken, async (req, res) => {
         price,
         description,
         prepTime,
-        rating,
+        tags: tags || [],
         isAvailable,
+        isVegetarian,
         image,
       },
     });

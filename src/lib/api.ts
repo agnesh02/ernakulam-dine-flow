@@ -1,5 +1,17 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
+// Minimum loading delay for better UX (2 seconds)
+const MINIMUM_LOADING_DELAY = 2000;
+
+// Helper function to add artificial delay for better UX
+const withMinimumDelay = async <T>(promise: Promise<T>): Promise<T> => {
+  const [result] = await Promise.all([
+    promise,
+    new Promise(resolve => setTimeout(resolve, MINIMUM_LOADING_DELAY))
+  ]);
+  return result;
+};
+
 // Helper function to get auth token
 const getAuthToken = () => {
   return localStorage.getItem('authToken');
@@ -33,10 +45,10 @@ const authFetch = async (url: string, options: RequestInit = {}) => {
 // Auth API
 export const authAPI = {
   login: async (pin: string) => {
-    return authFetch('/auth/login', {
+    return withMinimumDelay(authFetch('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ pin }),
-    });
+    }));
   },
 
   verify: async () => {
@@ -53,7 +65,7 @@ export const authAPI = {
 export const menuAPI = {
   getAll: async (availableOnly = false) => {
     const query = availableOnly ? '?available=true' : '';
-    return authFetch(`/menu${query}`);
+    return withMinimumDelay(authFetch(`/menu${query}`));
   },
 
   getById: async (id: string) => {
@@ -109,7 +121,7 @@ export const orderAPI = {
 
   getAll: async (status?: string) => {
     const query = status ? `?status=${status}` : '';
-    return authFetch(`/orders${query}`);
+    return withMinimumDelay(authFetch(`/orders${query}`));
   },
 
   updateStatus: async (id: string, status: string) => {
@@ -158,10 +170,10 @@ export const orderAPI = {
   },
 
   markPaid: async (id: string, paymentMethod = 'cash') => {
-    return authFetch(`/orders/${id}/payment`, {
+    return withMinimumDelay(authFetch(`/orders/${id}/payment`, {
       method: 'POST',
       body: JSON.stringify({ paymentMethod }),
-    });
+    }));
   },
 
   cancelOrder: async (id: string) => {
