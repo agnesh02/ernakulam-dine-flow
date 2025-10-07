@@ -1,7 +1,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
-// Minimum loading delay for better UX (2 seconds)
-const MINIMUM_LOADING_DELAY = 2000;
+// Minimum loading delay for better UX
+const MINIMUM_LOADING_DELAY = 800;
 
 // Helper function to add artificial delay for better UX
 const withMinimumDelay = async <T>(promise: Promise<T>): Promise<T> => {

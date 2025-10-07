@@ -68,6 +68,9 @@ iframe[src*="checkout.razorpay.com"] {
     --card: var(--restaurant-white);
     --card-foreground: var(--restaurant-grey-900);
     
+    --popover: var(--restaurant-white);
+    --popover-foreground: var(--restaurant-grey-900);
+    
     --primary: var(--restaurant-teal);
     --primary-foreground: var(--restaurant-white);
     

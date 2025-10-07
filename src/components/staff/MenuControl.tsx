@@ -74,6 +74,74 @@ export const MenuControl = () => {
     tags: [] as string[]
   });
 
+  // Function to clear form state
+  const clearForm = () => {
+    setNewItem({
+      name: "",
+      description: "",
+      price: "",
+      prepTime: "",
+      category: "",
+      isVegetarian: true,
+      tags: []
+    });
+  };
+
+  // Function to validate form data
+  const validateForm = () => {
+    const errors: string[] = [];
+    
+    if (!newItem.name.trim()) {
+      errors.push("Item name is required");
+    } else if (newItem.name.trim().length < 2) {
+      errors.push("Item name must be at least 2 characters long");
+    }
+    
+    if (!newItem.description.trim()) {
+      errors.push("Item description is required");
+    } else if (newItem.description.trim().length < 10) {
+      errors.push("Item description must be at least 10 characters long");
+    }
+    
+    if (!newItem.price) {
+      errors.push("Price is required");
+    } else {
+      const price = parseFloat(newItem.price);
+      if (isNaN(price)) {
+        errors.push("Price must be a valid number");
+      } else if (price < 0) {
+        errors.push("Price cannot be negative");
+      } else if (price === 0) {
+        errors.push("Price must be greater than ₹0");
+      } else if (price < 1) {
+        errors.push("Price must be at least ₹1");
+      }
+    }
+    
+    if (!newItem.prepTime) {
+      errors.push("Preparation time is required");
+    } else {
+      const prepTime = parseInt(newItem.prepTime);
+      if (isNaN(prepTime)) {
+        errors.push("Preparation time must be a valid number");
+      } else if (prepTime < 0) {
+        errors.push("Preparation time cannot be negative");
+      } else if (prepTime === 0) {
+        errors.push("Preparation time must be greater than 0 minutes");
+      } else if (prepTime < 1) {
+        errors.push("Preparation time must be at least 1 minute");
+      } else if (prepTime > 300) {
+        errors.push("Preparation time cannot exceed 300 minutes");
+      }
+    }
+    
+    if (!newItem.category) {
+      errors.push("Category is required");
+    }
+    
+    return errors;
+  };
+
   // Fetch menu items on mount
   useEffect(() => {
     fetchMenuItems();
@@ -137,10 +205,11 @@ export const MenuControl = () => {
   };
 
   const addMenuItem = async () => {
-    if (!newItem.name || !newItem.description || !newItem.price || !newItem.prepTime || !newItem.category) {
+    const validationErrors = validateForm();
+    if (validationErrors.length > 0) {
       toast({
-        title: "Error",
-        description: "Please fill in all required fields",
+        title: "Validation Error",
+        description: validationErrors.join(", "),
         variant: "destructive",
       });
       return;
@@ -163,15 +232,7 @@ export const MenuControl = () => {
       setMenuItems(prev => [createdItem, ...prev]);
       
       // Reset form
-      setNewItem({
-        name: "",
-        description: "",
-        price: "",
-        prepTime: "",
-        category: "",
-        isVegetarian: true,
-        tags: []
-      });
+      clearForm();
       
       setShowAddDialog(false);
       toast({
@@ -206,10 +267,20 @@ export const MenuControl = () => {
   };
 
   const updateMenuItem = async () => {
-    if (!editingItem || !newItem.name || !newItem.description || !newItem.price || !newItem.prepTime || !newItem.category) {
+    if (!editingItem) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields",
+        description: "No item selected for editing",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const validationErrors = validateForm();
+    if (validationErrors.length > 0) {
+      toast({
+        title: "Validation Error",
+        description: validationErrors.join(", "),
         variant: "destructive",
       });
       return;
@@ -231,15 +302,7 @@ export const MenuControl = () => {
       setMenuItems(prev => prev.map(item => item.id === editingItem.id ? updatedItem : item));
       
       // Reset form
-      setNewItem({
-        name: "",
-        description: "",
-        price: "",
-        prepTime: "",
-        category: "",
-        isVegetarian: true,
-        tags: []
-      });
+      clearForm();
       
       setShowEditDialog(false);
       setEditingItem(null);
@@ -393,7 +456,12 @@ export const MenuControl = () => {
               className="pl-10"
             />
             </div>
-            <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+            <Dialog open={showAddDialog} onOpenChange={(open) => {
+              setShowAddDialog(open);
+              if (open) {
+                clearForm();
+              }
+            }}>
               <DialogTrigger asChild>
                 <Button className="ml-4 restaurant-button-accent">
                   <Plus className="h-4 w-4 mr-2" />
@@ -433,6 +501,8 @@ export const MenuControl = () => {
                       <Input
                         id="price"
                         type="number"
+                        min="0"
+                        step="0.01"
                         value={newItem.price}
                         onChange={(e) => setNewItem(prev => ({ ...prev, price: e.target.value }))}
                         placeholder="250"
@@ -443,6 +513,8 @@ export const MenuControl = () => {
                       <Input
                         id="prepTime"
                         type="number"
+                        min="1"
+                        max="300"
                         value={newItem.prepTime}
                         onChange={(e) => setNewItem(prev => ({ ...prev, prepTime: e.target.value }))}
                         placeholder="15"
@@ -551,6 +623,8 @@ export const MenuControl = () => {
                       <Input
                         id="edit-price"
                         type="number"
+                        min="0"
+                        step="0.01"
                         value={newItem.price}
                         onChange={(e) => setNewItem(prev => ({ ...prev, price: e.target.value }))}
                         placeholder="250"
@@ -561,6 +635,8 @@ export const MenuControl = () => {
                       <Input
                         id="edit-prepTime"
                         type="number"
+                        min="1"
+                        max="300"
                         value={newItem.prepTime}
                         onChange={(e) => setNewItem(prev => ({ ...prev, prepTime: e.target.value }))}
                         placeholder="15"
