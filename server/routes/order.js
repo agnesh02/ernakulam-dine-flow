@@ -626,6 +626,100 @@ router.delete('/:orderId/items/:itemId', authenticateToken, async (req, res) => 
   }
 });
 
+// Update item quantity in order (staff only)
+router.patch('/:orderId/items/:itemId/quantity', authenticateToken, async (req, res) => {
+  try {
+    const { orderId, itemId } = req.params;
+    const { quantity } = req.body;
+
+    if (!quantity || quantity < 1) {
+      return res.status(400).json({ error: 'Quantity must be at least 1' });
+    }
+
+    // Get the order first
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        orderItems: {
+          include: {
+            menuItem: true,
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    // Check if order can be modified
+    if (order.status === 'served' || order.status === 'cancelled') {
+      return res.status(400).json({ error: 'Cannot modify completed or cancelled orders' });
+    }
+
+    // Find the item to update
+    const itemToUpdate = order.orderItems.find(item => item.id === itemId);
+    if (!itemToUpdate) {
+      return res.status(404).json({ error: 'Item not found in order' });
+    }
+
+    // Update the item quantity
+    await prisma.orderItem.update({
+      where: { id: itemId },
+      data: { quantity: parseInt(quantity) },
+    });
+
+    // Recalculate totals
+    let newTotalAmount = 0;
+    order.orderItems.forEach(item => {
+      if (item.id === itemId) {
+        newTotalAmount += item.price * parseInt(quantity);
+      } else {
+        newTotalAmount += item.price * item.quantity;
+      }
+    });
+
+    const newServiceCharge = Math.round(newTotalAmount * 0.05);
+    const newGst = Math.round(newTotalAmount * 0.18);
+    const newGrandTotal = newTotalAmount + newServiceCharge + newGst;
+
+    // Update order with new totals
+    const updatedOrder = await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        totalAmount: newTotalAmount,
+        serviceCharge: newServiceCharge,
+        gst: newGst,
+        grandTotal: newGrandTotal,
+      },
+      include: {
+        orderItems: {
+          include: {
+            menuItem: true,
+          },
+        },
+      },
+    });
+
+    // Emit socket event
+    const io = req.app.get('io');
+    io.to('staff').emit('order:itemUpdated', { orderId, itemId, quantity, order: updatedOrder });
+    io.to(`customer:${orderId}`).emit('order:statusUpdate', { 
+      orderId, 
+      status: updatedOrder.status, 
+      order: updatedOrder 
+    });
+
+    res.json({ 
+      message: 'Item quantity updated successfully',
+      order: updatedOrder 
+    });
+  } catch (error) {
+    console.error('Error updating item quantity:', error);
+    res.status(500).json({ error: 'Failed to update item quantity' });
+  }
+});
+
 // Get order statistics (staff only)
 router.get('/stats/summary', authenticateToken, async (req, res) => {
   try {

@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, CheckCircle, AlertTriangle, Users, X } from "lucide-react";
+import { Clock, CheckCircle, AlertTriangle, Users, X, Minus, Plus } from "lucide-react";
 import { orderAPI } from "@/lib/api";
 import { getSocket, joinStaffRoom, onNewOrder, onOrderStatusUpdate, onOrderPaid } from "@/lib/socket";
 import { useToast } from "@/hooks/use-toast";
@@ -72,6 +72,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.C
 export const OrderManagement = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const fetchOrders = useCallback(async () => {
@@ -156,6 +157,10 @@ export const OrderManagement = () => {
   }, [toast, fetchOrders]);
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    if (updatingOrderId === orderId) return; // Prevent updating the same order multiple times
+    
+    setUpdatingOrderId(orderId);
+    
     // Optimistic update
     setOrders(orders.map(order => 
       order.id === orderId 
@@ -178,14 +183,20 @@ export const OrderManagement = () => {
         description: message,
         variant: "destructive",
       });
+    } finally {
+      setUpdatingOrderId(null);
     }
   };
 
   const cancelOrder = async (orderId: string) => {
+    if (updatingOrderId === orderId) return; // Prevent updating the same order multiple times
+    
     // Confirm cancellation
     if (!confirm("Are you sure you want to cancel this order?")) {
       return;
     }
+
+    setUpdatingOrderId(orderId);
 
     try {
       await orderAPI.cancelOrder(orderId);
@@ -206,14 +217,89 @@ export const OrderManagement = () => {
         description: message,
         variant: "destructive",
       });
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  };
+
+  const increaseItemQuantity = async (orderId: string, itemId: string, itemName: string, currentQuantity: number) => {
+    if (updatingOrderId === orderId) return; // Prevent updating the same order multiple times
+    
+    setUpdatingOrderId(orderId);
+
+    try {
+      const newQuantity = currentQuantity + 1;
+
+      const result = await orderAPI.updateItemQuantity(orderId, itemId, newQuantity);
+      
+      // Update the order in state
+      setOrders(orders.map(order => 
+        order.id === orderId ? result.order : order
+      ));
+      
+      toast({
+        title: "Quantity Updated",
+        description: `${itemName} quantity increased to ${newQuantity}`,
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to update quantity";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  };
+
+  const reduceItemQuantity = async (orderId: string, itemId: string, itemName: string, currentQuantity: number) => {
+    if (updatingOrderId === orderId) return; // Prevent updating the same order multiple times
+    
+    setUpdatingOrderId(orderId);
+
+    try {
+      const newQuantity = currentQuantity - 1;
+      
+      if (newQuantity === 0) {
+        // If reducing to 0, remove the item instead
+        setUpdatingOrderId(null); // Clear before calling removeOrderItem
+        await removeOrderItem(orderId, itemId, itemName);
+        return;
+      }
+
+      const result = await orderAPI.updateItemQuantity(orderId, itemId, newQuantity);
+      
+      // Update the order in state
+      setOrders(orders.map(order => 
+        order.id === orderId ? result.order : order
+      ));
+      
+      toast({
+        title: "Quantity Updated",
+        description: `${itemName} quantity reduced to ${newQuantity}`,
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to update quantity";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingOrderId(null);
     }
   };
 
   const removeOrderItem = async (orderId: string, itemId: string, itemName: string) => {
+    if (updatingOrderId === orderId) return; // Prevent updating the same order multiple times
+    
     // Confirm removal
     if (!confirm(`Remove "${itemName}" from this order?`)) {
       return;
     }
+
+    setUpdatingOrderId(orderId);
 
     try {
       const result = await orderAPI.removeOrderItem(orderId, itemId);
@@ -245,6 +331,8 @@ export const OrderManagement = () => {
         description: message,
         variant: "destructive",
       });
+    } finally {
+      setUpdatingOrderId(null);
     }
   };
 
@@ -343,16 +431,21 @@ export const OrderManagement = () => {
 
       {/* Active Orders */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Active Orders</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-2xl font-bold text-primary">Active Orders</h3>
+          <div className="text-sm text-muted-foreground">
+            {activeOrders.length} active {activeOrders.length === 1 ? 'order' : 'orders'}
+          </div>
+        </div>
         
         {activeOrders.length === 0 ? (
-          <Card className="restaurant-card text-center py-12">
-            <CheckCircle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Active Orders</h3>
-            <p className="text-muted-foreground">All orders have been served</p>
+          <Card className="restaurant-card text-center py-16 bg-gradient-to-br from-gray-50 to-gray-100">
+            <CheckCircle className="h-20 w-20 text-green-500 mx-auto mb-6" />
+            <h3 className="text-xl font-bold mb-3">No Active Orders</h3>
+            <p className="text-muted-foreground text-lg">All orders have been served</p>
           </Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {activeOrders.map((order) => {
               const config = statusConfig[order.status];
               if (!config) return null;
@@ -361,97 +454,130 @@ export const OrderManagement = () => {
               return (
                 <Card 
                   key={order.id} 
-                  className={`restaurant-card ${order.status === "pending" ? "border-restaurant-orange border-2" : ""}`}
+                  className={`restaurant-card relative overflow-hidden transition-all duration-300 hover:shadow-xl ${
+                    order.status === "pending" ? "border-restaurant-orange border-2 bg-orange-50/50" :
+                    order.status === "paid" ? "border-green-500 border-2 bg-green-50/50" :
+                    order.status === "preparing" ? "border-blue-500 border-2 bg-blue-50/50" :
+                    order.status === "ready" ? "border-status-available border-2 bg-emerald-50/50" :
+                    ""
+                  }`}
                 >
-                  <div className="space-y-4">
+                  {/* Status Indicator Line */}
+                  <div className={`absolute top-0 left-0 right-0 h-1 ${config.color}`} />
+
+                  <div className="space-y-6">
                     {/* Order Header */}
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-lg">{order.orderNumber}</span>
-                      <Badge className={config.color}>
-                        <Icon className="h-3 w-3 mr-1" />
+                      <div>
+                        <span className="font-bold text-2xl">{order.orderNumber}</span>
+                        <div className="text-sm text-muted-foreground mt-1">{formatTime(order.createdAt)}</div>
+                      </div>
+                      <Badge className={`${config.color} text-sm px-3 py-1 h-auto font-semibold`}>
+                        <Icon className="h-4 w-4 mr-2" />
                         {config.label}
                       </Badge>
                     </div>
 
-                    {/* Order Details */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Time:</span>
-                        <span className="font-medium">{formatTime(order.createdAt)}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Type:</span>
-                        <Badge variant="outline" className="capitalize">
+                    {/* Order Type & Payment */}
+                    <div className="flex items-center justify-between bg-white/80 rounded-lg p-3 shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <Users className="h-5 w-5 text-muted-foreground" />
+                        <Badge variant="outline" className="capitalize text-sm">
                           {order.orderType === 'takeaway' ? '🛍️ Takeaway' : '🍽️ Dine-In'}
                         </Badge>
                       </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Amount:</span>
-                        <span className="font-medium">₹{order.grandTotal}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Payment:</span>
-                        <Badge variant={order.paymentStatus === "paid" ? "default" : "secondary"}>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={order.paymentStatus === "paid" ? "default" : "secondary"} className="capitalize">
                           {order.paymentStatus}
                         </Badge>
-                      </div>
-                      {order.paymentMethod && (
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Method:</span>
+                        {order.paymentMethod && (
                           <Badge variant="outline" className="capitalize">
-                            {order.paymentMethod === 'online' ? '💳 Online' : '💵 Cash'}
+                            {order.paymentMethod === 'online' ? '💳' : '💵'}
                           </Badge>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
 
                     {/* Order Items */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Items:</h4>
-                      {order.orderItems.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 text-sm">
-                              <span className="font-medium">{item.quantity}x</span>
-                              <span className="truncate">{item.menuItem.name}</span>
+                    <div className="space-y-3 bg-white/80 rounded-lg p-3 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold">Order Items</h4>
+                        <span className="text-lg font-bold text-primary">₹{order.grandTotal}</span>
+                      </div>
+                      <div className="space-y-2 divide-y">
+                        {order.orderItems.map((item) => (
+                          <div key={item.id} className="flex items-start justify-between gap-2 pt-2 first:pt-0">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-primary">{item.quantity}x</span>
+                                <span className="font-medium">{item.menuItem.name}</span>
+                              </div>
+                              {item.notes && (
+                                <p className="text-sm text-muted-foreground mt-0.5">{item.notes}</p>
+                              )}
                             </div>
-                            {item.notes && (
-                              <span className="text-xs text-muted-foreground italic">({item.notes})</span>
+                            {(order.status === "pending" || order.status === "paid") && (
+                              <div className="flex items-center gap-1 flex-shrink-0 -mt-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => increaseItemQuantity(order.id, item.id, item.menuItem.name, item.quantity)}
+                                  disabled={updatingOrderId === order.id}
+                                  className="h-8 w-8 p-0 hover:bg-green-100 hover:text-green-600 transition-colors duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                                  title="Increase quantity by 1"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                                {item.quantity > 1 && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => reduceItemQuantity(order.id, item.id, item.menuItem.name, item.quantity)}
+                                    disabled={updatingOrderId === order.id}
+                                    className="h-8 w-8 p-0 hover:bg-orange-100 hover:text-orange-600 transition-colors duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    title="Reduce quantity by 1"
+                                  >
+                                    <Minus className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeOrderItem(order.id, item.id, item.menuItem.name)}
+                                  disabled={updatingOrderId === order.id}
+                                  className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600 transition-colors duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                                  title="Remove item completely"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
                             )}
                           </div>
-                          {(order.status === "pending" || order.status === "paid") && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeOrderItem(order.id, item.id, item.menuItem.name)}
-                              className="h-7 w-7 p-0 hover:bg-destructive hover:text-destructive-foreground flex-shrink-0"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex space-x-2">
+                    <div className="flex gap-3">
                       {config.nextStatus && (
                         <Button
                           onClick={() => updateOrderStatus(order.id, config.nextStatus!)}
-                          className={`flex-1 ${
+                          disabled={updatingOrderId === order.id}
+                          className={`flex-1 h-12 text-lg font-semibold shadow-lg transition-all duration-300 hover:scale-[1.02] ${
                             config.nextStatus === "preparing" ? "bg-blue-500 hover:bg-blue-600" :
                             config.nextStatus === "ready" ? "restaurant-button-accent" :
                             "bg-status-available hover:opacity-90"
-                          } text-white`}
+                          } text-white disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
-                          {config.buttonLabel}
+                          {updatingOrderId === order.id ? "Processing..." : config.buttonLabel}
                         </Button>
                       )}
                       {(order.status === "pending" || order.status === "paid") && (
                         <Button
                           onClick={() => cancelOrder(order.id)}
-                          variant="destructive"
-                          className="flex-shrink-0"
+                          disabled={updatingOrderId === order.id}
+                          variant="outline"
+                          className="flex-shrink-0 h-12 border-2 hover:bg-red-50 hover:text-red-600 hover:border-red-600 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Cancel
                         </Button>

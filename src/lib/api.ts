@@ -188,6 +188,13 @@ export const orderAPI = {
     });
   },
 
+  updateItemQuantity: async (orderId: string, itemId: string, quantity: number) => {
+    return authFetch(`/orders/${orderId}/items/${itemId}/quantity`, {
+      method: 'PATCH',
+      body: JSON.stringify({ quantity }),
+    });
+  },
+
   getStats: async () => {
     return authFetch('/orders/stats/summary');
   },
