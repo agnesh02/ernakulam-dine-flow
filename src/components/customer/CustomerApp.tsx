@@ -252,10 +252,10 @@ export const CustomerApp = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-4 sm:mb-6 h-auto">
+        <TabsList className="grid w-full grid-cols-3 mb-4 sm:mb-6 h-16 bg-restaurant-grey-100">
           <TabsTrigger 
             value="menu" 
-            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground py-3 px-2 text-xs sm:text-sm touch-manipulation"
+            className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-restaurant-grey-600 hover:bg-restaurant-grey-200 px-2 text-xs sm:text-sm touch-manipulation transition-all duration-200 h-full"
           >
             <Menu className="h-4 w-4" />
             <span className="hidden xs:inline">Menu</span>
@@ -263,9 +263,7 @@ export const CustomerApp = () => {
           </TabsTrigger>
           <TabsTrigger 
             value="status" 
-            className={`flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground py-3 px-2 text-xs sm:text-sm touch-manipulation relative ${
-              currentOrder ? "relative" : ""
-            }`}
+            className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-restaurant-grey-600 hover:bg-restaurant-grey-200 px-2 text-xs sm:text-sm touch-manipulation transition-all duration-200 relative h-full"
           >
             <div className="relative">
               <Clock className={`h-4 w-4 ${
@@ -284,11 +282,11 @@ export const CustomerApp = () => {
                 }`} style={{ animationDuration: '2s' }}></div>
               )}
             </div>
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center justify-center">
               <span className="hidden xs:inline">Order Status</span>
               <span className="xs:hidden">Status</span>
               {currentOrder && (
-                <div className="flex items-center gap-1 mt-0.5">
+                <div className="flex items-center gap-1">
                   <div className={`w-2 h-2 rounded-full ${
                     currentOrder.status === "preparing" ? "bg-blue-500" :
                     currentOrder.status === "ready" ? "bg-green-500" :
@@ -315,7 +313,7 @@ export const CustomerApp = () => {
           </TabsTrigger>
           <TabsTrigger 
             value="payment" 
-            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground py-3 px-2 text-xs sm:text-sm touch-manipulation"
+            className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-restaurant-grey-600 hover:bg-restaurant-grey-200 px-2 text-xs sm:text-sm touch-manipulation transition-all duration-200 h-full"
           >
             <CreditCard className="h-4 w-4" />
             <span className="hidden xs:inline">Bill & Payment</span>

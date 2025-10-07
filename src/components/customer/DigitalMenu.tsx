@@ -219,7 +219,7 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
               key: RAZORPAY_KEY_ID,
               amount: paymentData.amount * 100, // Convert to paise
               currency: paymentData.currency,
-              name: 'Ernakulam Dine Flow',
+              name: 'RestoGenie',
               description: `Order Total: ₹${paymentData.amount}`,
               order_id: paymentData.razorpayOrderId,
               prefill: {
