@@ -37,6 +37,9 @@ export const StaffDashboard = () => {
     return <PinLogin onLogin={() => setIsAuthenticated(true)} />;
   }
 
+  const staffInfo = getStaffInfo();
+  const restaurant = staffInfo?.restaurant;
+
   return (
     <div className="space-y-6">
       <div className="text-center relative">
@@ -44,7 +47,7 @@ export const StaffDashboard = () => {
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <User className="h-4 w-4" />
-              <span>{getStaffInfo()?.name || 'Staff Member'}</span>
+              <span>{staffInfo?.name || 'Staff Member'}</span>
             </div>
             <Button
               variant="outline"
@@ -57,6 +60,15 @@ export const StaffDashboard = () => {
             </Button>
           </div>
         </div>
+        {restaurant && (
+          <div className="mb-3 inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-lg">
+            <span className="text-2xl">{restaurant.image || '🍽️'}</span>
+            <div className="text-left">
+              <p className="text-sm font-semibold text-primary">{restaurant.name}</p>
+              <p className="text-xs text-muted-foreground">{restaurant.cuisine}</p>
+            </div>
+          </div>
+        )}
         <h2 className="text-2xl font-bold text-primary mb-2">Staff Dashboard</h2>
         <p className="text-muted-foreground">Restaurant command center for efficient operations</p>
       </div>

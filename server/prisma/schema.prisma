@@ -10,13 +10,31 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Restaurant {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String
+  image       String?
+  cuisine     String     // e.g., "Indian", "Chinese", "Italian", "Fast Food"
+  isActive    Boolean    @default(true)
+  rating      Float      @default(4.0)
+  preparationTime Int    @default(20) // average preparation time in minutes
+  menuItems   MenuItem[]
+  staff       Staff[]
+  orders      Order[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
 model Staff {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  name      String
-  pin       String   // hashed PIN for authentication
-  role      String   @default("staff") // staff, manager, admin
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  pin          String     // hashed PIN for authentication
+  role         String     @default("staff") // staff, manager, admin
+  restaurantId String     @db.ObjectId
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 }
 
 model MenuItem {
@@ -30,6 +48,8 @@ model MenuItem {
   isAvailable  Boolean     @default(true)
   isVegetarian Boolean     @default(true) // true for veg, false for non-veg
   image        String?
+  restaurantId String      @db.ObjectId
+  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   orderItems   OrderItem[]
@@ -38,6 +58,7 @@ model MenuItem {
 model Order {
   id             String      @id @default(auto()) @map("_id") @db.ObjectId
   orderNumber    String      @unique
+  orderGroupId   String?     // Links multiple orders from same transaction
   status         String      @default("pending") // pending, paid, preparing, ready, served, cancelled
   orderType      String      @default("dine-in") // dine-in or takeaway
   totalAmount    Int
@@ -48,9 +69,13 @@ model Order {
   paymentMethod  String?
   customerEmail  String?
   customerPhone  String?
+  restaurantId   String      @db.ObjectId
+  restaurant     Restaurant  @relation(fields: [restaurantId], references: [id])
   orderItems     OrderItem[]
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
+  
+  @@index([orderGroupId])
 }
 
 model OrderItem {

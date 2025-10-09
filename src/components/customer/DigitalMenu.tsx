@@ -36,8 +36,19 @@ import {
   Wallet,
   CheckCircle2,
   Loader2,
-  Utensils
+  Utensils,
+  Star
 } from "lucide-react";
+
+interface Restaurant {
+  id: string;
+  name: string;
+  description: string;
+  cuisine: string;
+  image?: string;
+  rating: number;
+  preparationTime: number;
+}
 
 interface MenuItem {
   id: string;
@@ -50,6 +61,8 @@ interface MenuItem {
   isAvailable: boolean;
   isVegetarian: boolean;
   image?: string;
+  restaurantId: string;
+  restaurant?: Restaurant;
 }
 
 const availableTags = [
@@ -83,7 +96,9 @@ interface CreatedOrder {
 interface DigitalMenuProps {
   cart: OrderItem[];
   setCart: (order: OrderItem[]) => void;
-  onOrderPlaced: (order: CreatedOrder) => void;
+  onOrderPlaced: (orderOrGroupId: CreatedOrder | string) => void; // Can pass either first order or orderGroupId
+  selectedRestaurant?: Restaurant | null;
+  onBackToRestaurants?: () => void;
 }
 
 const categoryIcons = {
@@ -93,7 +108,7 @@ const categoryIcons = {
   desserts: Dessert,
 };
 
-export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) => {
+export const DigitalMenu = ({ cart, setCart, onOrderPlaced, selectedRestaurant, onBackToRestaurants }: DigitalMenuProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [dietaryFilter, setDietaryFilter] = useState<'all' | 'veg' | 'non-veg'>('all');
@@ -106,16 +121,19 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const { toast } = useToast();
 
-  // Fetch menu items on mount
+  // Fetch menu items on mount and when restaurant changes
   useEffect(() => {
-    fetchMenuItems();
+    if (selectedRestaurant) {
+      fetchMenuItems();
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedRestaurant]);
 
   const fetchMenuItems = async () => {
     try {
       setIsLoading(true);
-      const items = await menuAPI.getAll(true); // Only get available items
+      const restaurantId = selectedRestaurant?.id;
+      const items = await menuAPI.getAll(true, restaurantId); // Get available items for selected restaurant
       setMenuItems(items);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Failed to fetch menu items";
@@ -140,8 +158,15 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
         )
       );
     } else {
+      // Add the full item with restaurant info for multi-restaurant support
       setCart([...cart, { ...item, quantity: 1 }]);
     }
+    
+    toast({
+      title: "Added to cart",
+      description: `${item.name} from ${item.restaurant?.name || selectedRestaurant?.name}`,
+      duration: 2000,
+    });
   };
 
   const removeFromCart = (itemId: string) => {
@@ -257,16 +282,24 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
                     orderType: orderType,
                   });
 
-                  console.log('✅ Verification successful, order created:', result);
-                  const createdOrder = result.order;
-
-                  // Notify parent component (order is now created and sent to kitchen)
-                  onOrderPlaced(createdOrder);
+                  console.log('✅ Verification successful, orders created:', result);
                   
-                  // Show success toast
+                  // Handle multiple orders response
+                  const orders = result.orders || [result.order];
+                  const firstOrder = orders[0];
+
+                  // Notify parent component with orderGroupId (for multi-restaurant tracking) or first order
+                  onOrderPlaced(result.orderGroupId || firstOrder);
+                  
+                  // Show success toast with all order numbers
+                  const orderNumbers = orders.map((o: { orderNumber: string }) => o.orderNumber).join(', ');
+                  const totalAmount = orders.reduce((sum: number, o: { grandTotal: number }) => sum + o.grandTotal, 0);
+                  
                   toast({
                     title: "Order Placed & Paid! 🎉",
-                    description: `Your order #${createdOrder.orderNumber} is confirmed and sent to kitchen. Total: ₹${createdOrder.grandTotal}`,
+                    description: orders.length > 1
+                      ? `${orders.length} orders created: ${orderNumbers}. Total: ₹${totalAmount}`
+                      : `Your order #${firstOrder.orderNumber} is confirmed. Total: ₹${firstOrder.grandTotal}`,
                     duration: 5000,
                     variant: "success",
                   });
@@ -308,20 +341,27 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
           throw new Error(message);
         }
       } else {
-        // POSTPAY: Create order immediately (existing flow)
-        const createdOrder = await orderAPI.create({ 
+        // POSTPAY: Create order immediately (may create multiple orders for multi-restaurant)
+        const response = await orderAPI.create({ 
           items: orderItems,
           paymentMethod: 'cash',
           orderType: orderType,
         });
 
-        // Notify parent component
-        onOrderPlaced(createdOrder);
+        // Handle multiple orders response
+        const orders = response.orders || [response];
+        const firstOrder = orders[0];
+
+        // Notify parent component with orderGroupId (for multi-restaurant tracking) or first order
+        onOrderPlaced(response.orderGroupId || firstOrder);
         
-        // Show success toast
+        // Show success toast with all order numbers
+        const orderNumbers = orders.map((o: { orderNumber: string }) => o.orderNumber).join(', ');
         toast({
           title: "Order Placed Successfully! 🎉",
-          description: `Your order #${createdOrder.orderNumber} has been placed. Pay after your meal is served.`,
+          description: orders.length > 1 
+            ? `${orders.length} orders created: ${orderNumbers}. Pay after your meal is served.`
+            : `Your order #${firstOrder.orderNumber} has been placed. Pay after your meal is served.`,
           duration: 5000,
           variant: "success",
         });
@@ -402,6 +442,45 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
 
   return (
     <div className="space-y-6">
+      {/* Restaurant Header */}
+      {selectedRestaurant && (
+        <Card className="restaurant-card bg-gradient-to-r from-primary/5 to-transparent">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="text-4xl">
+                {selectedRestaurant.image || '🍽️'}
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">{selectedRestaurant.name}</h2>
+                <p className="text-sm text-gray-600">{selectedRestaurant.description}</p>
+                <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
+                  <span className="flex items-center space-x-1">
+                    <span className="font-medium">{selectedRestaurant.cuisine}</span>
+                  </span>
+                  <span className="flex items-center space-x-1">
+                    <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                    <span>{selectedRestaurant.rating.toFixed(1)}</span>
+                  </span>
+                  <span className="flex items-center space-x-1">
+                    <Clock className="h-4 w-4" />
+                    <span>{selectedRestaurant.preparationTime} min</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+            {onBackToRestaurants && (
+              <Button
+                variant="outline"
+                onClick={onBackToRestaurants}
+                className="flex items-center space-x-2"
+              >
+                ← Back to Restaurants
+              </Button>
+            )}
+          </div>
+        </Card>
+      )}
+
       {/* Search and Filter */}
       <Card className="restaurant-card">
         <div className="space-y-4">
@@ -660,63 +739,92 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced }: DigitalMenuProps) 
                         </div>
                       ) : (
                         <>
-                          {/* Cart Items */}
-                          <div className="space-y-3">
-                            {cart.map((item) => {
-                              const Icon = categoryIcons[item.category as keyof typeof categoryIcons] || ChefHat;
-                              return (
-                                <Card key={item.id} className="p-4">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center space-x-3 flex-1">
-                                      <div className="p-2 bg-restaurant-grey-100 rounded-lg">
-                                        <Icon className="h-4 w-4 text-primary" />
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <h4 className="font-medium text-sm truncate">{item.name}</h4>
-                                        <p className="text-xs text-muted-foreground">₹{item.price} each</p>
-                                      </div>
-                                    </div>
-                                    
-                                    <div className="flex items-center space-x-2">
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => removeFromCart(item.id)}
-                                        className="h-6 w-6 p-0"
-                                      >
-                                        <Minus className="h-3 w-3" />
-                                      </Button>
-                                      <span className="font-medium text-sm w-6 text-center">{item.quantity}</span>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => addToCart(item)}
-                                        className="h-6 w-6 p-0"
-                                      >
-                                        <Plus className="h-3 w-3" />
-                                      </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => removeFromCart(item.id)}
-                                        className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                                      >
-                                        <X className="h-3 w-3" />
-                                      </Button>
-                                    </div>
+                          {/* Cart Items - Grouped by Restaurant */}
+                          <div className="space-y-4">
+                            {/* Group cart items by restaurant */}
+                            {Object.entries(
+      cart.reduce((groups, item) => {
+        const restaurantName = item.restaurant?.name || 'Unknown Restaurant';
+        if (!groups[restaurantName]) {
+          groups[restaurantName] = {
+            restaurant: item.restaurant,
+            items: []
+          };
+        }
+        groups[restaurantName].items.push(item);
+        return groups;
+      }, {} as Record<string, { restaurant?: { name: string; cuisine?: string; image?: string }; items: typeof cart }>)
+                            ).map(([restaurantName, { restaurant, items }]) => (
+                              <div key={restaurantName} className="space-y-2">
+                                {/* Restaurant Header */}
+                                <div className="flex items-center gap-2 pb-2 border-b">
+                                  <span className="text-lg">{restaurant?.image || '🍽️'}</span>
+                                  <div>
+                                    <p className="font-semibold text-sm">{restaurantName}</p>
+                                    <p className="text-xs text-muted-foreground">{restaurant?.cuisine}</p>
                                   </div>
-                                  
-                                  <div className="flex justify-between items-center mt-2 pt-2 border-t">
-                                    <span className="text-xs text-muted-foreground">
-                                      {item.quantity} × ₹{item.price}
-                                    </span>
-                                    <span className="font-bold text-sm">
-                                      ₹{item.price * item.quantity}
-                                    </span>
-                                  </div>
-                                </Card>
-                              );
-                            })}
+                                </div>
+                                
+                                {/* Restaurant Items */}
+                                <div className="space-y-2">
+                                  {items.map((item) => {
+                                    const Icon = categoryIcons[item.category as keyof typeof categoryIcons] || ChefHat;
+                                    return (
+                                      <Card key={item.id} className="p-3">
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center space-x-3 flex-1">
+                                            <div className="p-2 bg-restaurant-grey-100 rounded-lg">
+                                              <Icon className="h-4 w-4 text-primary" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                              <h4 className="font-medium text-sm truncate">{item.name}</h4>
+                                              <p className="text-xs text-muted-foreground">₹{item.price} each</p>
+                                            </div>
+                                          </div>
+                                          
+                                          <div className="flex items-center space-x-2">
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => removeFromCart(item.id)}
+                                              className="h-6 w-6 p-0"
+                                            >
+                                              <Minus className="h-3 w-3" />
+                                            </Button>
+                                            <span className="font-medium text-sm w-6 text-center">{item.quantity}</span>
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => addToCart(item)}
+                                              className="h-6 w-6 p-0"
+                                            >
+                                              <Plus className="h-3 w-3" />
+                                            </Button>
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={() => setCart(cart.filter(c => c.id !== item.id))}
+                                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                                            >
+                                              <X className="h-3 w-3" />
+                                            </Button>
+                                          </div>
+                                        </div>
+                                        
+                                        <div className="flex justify-between items-center mt-2 pt-2 border-t">
+                                          <span className="text-xs text-muted-foreground">
+                                            {item.quantity} × ₹{item.price}
+                                          </span>
+                                          <span className="font-bold text-sm">
+                                            ₹{item.price * item.quantity}
+                                          </span>
+                                        </div>
+                                      </Card>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ))}
                           </div>
 
                           {/* Order Summary */}

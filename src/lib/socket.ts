@@ -44,9 +44,9 @@ export const disconnectSocket = () => {
 };
 
 // Helper functions for common socket operations
-export const joinStaffRoom = () => {
+export const joinStaffRoom = (restaurantId?: string) => {
   const socket = getSocket();
-  socket.emit('join:staff');
+  socket.emit('join:staff', restaurantId);
 };
 
 export const joinCustomerRoom = (orderId: string) => {

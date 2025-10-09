@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DigitalMenu } from "./DigitalMenu";
 import { OrderStatus } from "./OrderStatus";
 import { BillPayment } from "./BillPayment";
+import { RestaurantSelection } from "./RestaurantSelection";
 import { Menu, Clock, CreditCard, Loader2 } from "lucide-react";
 import { orderAPI } from "@/lib/api";
 import { onOrderStatusUpdate } from "@/lib/socket";
@@ -10,6 +11,20 @@ import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 
 export const CustomerApp = () => {
+  const [selectedRestaurant, setSelectedRestaurant] = useState<{
+    id: string;
+    name: string;
+    description: string;
+    cuisine: string;
+    image?: string;
+    rating: number;
+    preparationTime: number;
+  } | null>(() => {
+    // Restore selected restaurant from localStorage
+    const saved = localStorage.getItem('selectedRestaurant');
+    return saved ? JSON.parse(saved) : null;
+  });
+
   const [cart, setCart] = useState<Array<{
     id: string;
     name: string;
@@ -57,8 +72,21 @@ export const CustomerApp = () => {
     // Restore orderId from localStorage on mount
     return localStorage.getItem('currentOrderId');
   });
+  const [orderGroupId, setOrderGroupId] = useState<string | null>(() => {
+    // Restore orderGroupId from localStorage on mount
+    return localStorage.getItem('currentOrderGroupId');
+  });
   const [isRestoring, setIsRestoring] = useState(true);
   const { toast } = useToast();
+
+  // Persist selected restaurant to localStorage
+  useEffect(() => {
+    if (selectedRestaurant) {
+      localStorage.setItem('selectedRestaurant', JSON.stringify(selectedRestaurant));
+    } else {
+      localStorage.removeItem('selectedRestaurant');
+    }
+  }, [selectedRestaurant]);
 
   // Persist cart to localStorage whenever it changes
   useEffect(() => {
@@ -126,6 +154,7 @@ export const CustomerApp = () => {
     };
 
     restoreOrder();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Listen for real-time order updates
@@ -153,43 +182,51 @@ export const CustomerApp = () => {
         }
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
 
-  const handleOrderPlaced = (order: {
-    id: string;
-    orderNumber: string;
-    status: string;
-    grandTotal: number;
-    totalAmount: number;
-    serviceCharge: number;
-    gst: number;
-    orderType: string;
-    items: Array<{
-      id: string;
-      name: string;
-      quantity: number;
-      price: number;
-    }>;
-    orderItems: Array<{
-      id: string;
-      quantity: number;
-      price: number;
-      menuItem: {
-        id: string;
-        name: string;
-        prepTime: number;
-        price: number;
-      };
-    }>;
-    createdAt: string;
-    updatedAt: string;
-  }) => {
-    setOrderId(order.id);
-    setCurrentOrder(order);
+  const handleOrderPlaced = (orderOrGroupId: string | { id: string }) => {
+    // Handle both order object (single restaurant) and orderGroupId (multi-restaurant)
+    if (typeof orderOrGroupId === 'string') {
+      // Multi-restaurant order - store orderGroupId
+      setOrderGroupId(orderOrGroupId);
+      setOrderId(null);
+      setCurrentOrder(null);
+      localStorage.setItem('currentOrderGroupId', orderOrGroupId);
+      localStorage.removeItem('currentOrderId');
+    } else {
+      // Single restaurant order - store order object
+      setOrderId(orderOrGroupId.id);
+      setCurrentOrder(orderOrGroupId as any); // Type assertion needed due to complex order type
+      setOrderGroupId(null);
+      localStorage.setItem('currentOrderId', orderOrGroupId.id);
+      localStorage.removeItem('currentOrderGroupId');
+    }
+    
     setCart([]); // Clear cart after placing order
     localStorage.removeItem('customerCart'); // Clear cart from localStorage
-    localStorage.setItem('currentOrderId', order.id); // Save order ID
     setActiveTab("status"); // Switch to status tab
+  };
+
+  const handleSelectRestaurant = (restaurant: {
+    id: string;
+    name: string;
+    description: string;
+    cuisine: string;
+    image?: string;
+    rating: number;
+    preparationTime: number;
+  }) => {
+    setSelectedRestaurant(restaurant);
+    setActiveTab("menu");
+  };
+
+  const handleBackToRestaurants = () => {
+    setSelectedRestaurant(null);
+    // Don't clear cart - allow multi-restaurant orders!
+    // setCart([]); 
+    // localStorage.removeItem('customerCart');
+    localStorage.removeItem('selectedRestaurant');
   };
 
   // Show loading state while restoring
@@ -244,11 +281,28 @@ export const CustomerApp = () => {
     );
   }
 
+  // Show restaurant selection if no restaurant is selected and no active order
+  if (!selectedRestaurant && !currentOrder) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-primary mb-2">Welcome to Food Court</h2>
+          <p className="text-muted-foreground">Choose from our amazing restaurants</p>
+        </div>
+        <RestaurantSelection onSelectRestaurant={handleSelectRestaurant} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-primary mb-2">Customer Experience</h2>
-        <p className="text-muted-foreground">Mobile-first PWA for guests at the table</p>
+        <h2 className="text-2xl font-bold text-primary mb-2">
+          {selectedRestaurant ? selectedRestaurant.name : "Customer Experience"}
+        </h2>
+        <p className="text-muted-foreground">
+          {selectedRestaurant ? selectedRestaurant.description : "Mobile-first PWA for guests at the table"}
+        </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -326,6 +380,8 @@ export const CustomerApp = () => {
             cart={cart}
             setCart={setCart}
             onOrderPlaced={handleOrderPlaced}
+            selectedRestaurant={selectedRestaurant}
+            onBackToRestaurants={handleBackToRestaurants}
           />
         </TabsContent>
 
@@ -333,6 +389,7 @@ export const CustomerApp = () => {
           <OrderStatus 
             currentOrder={currentOrder}
             orderId={orderId}
+            orderGroupId={orderGroupId}
           />
         </TabsContent>
 
@@ -340,6 +397,7 @@ export const CustomerApp = () => {
           <BillPayment 
             currentOrder={currentOrder}
             orderId={orderId}
+            orderGroupId={orderGroupId}
           />
         </TabsContent>
       </Tabs>

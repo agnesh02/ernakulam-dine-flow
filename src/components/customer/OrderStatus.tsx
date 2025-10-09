@@ -32,10 +32,18 @@ interface OrderStatusProps {
         price: number;
       };
     }>;
+    restaurant?: {
+      id: string;
+      name: string;
+      cuisine: string;
+      image?: string;
+      preparationTime?: number;
+    };
     createdAt: string;
     updatedAt: string;
   } | null;
   orderId: string | null;
+  orderGroupId?: string | null; // For multi-restaurant orders
 }
 
 const statusSteps = [
@@ -71,9 +79,41 @@ const statusSteps = [
   },
 ];
 
-export const OrderStatus = ({ currentOrder, orderId }: OrderStatusProps) => {
+export const OrderStatus = ({ currentOrder, orderId, orderGroupId }: OrderStatusProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [groupOrders, setGroupOrders] = useState<Array<{
+    id: string;
+    orderNumber: string;
+    status: string;
+    grandTotal: number;
+    createdAt: string;
+    restaurant?: { name: string; cuisine: string; image?: string };
+    orderItems: Array<{ id: string; quantity: number; price: number; menuItem: { name: string } }>;
+  }>>([]);
+  
+  // Fetch orders by group ID (for multi-restaurant orders)
+  useEffect(() => {
+    const fetchOrderGroup = async () => {
+      if (!orderGroupId) return;
+      
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        const response = await orderAPI.getByGroupId(orderGroupId);
+        setGroupOrders(response.orders || []);
+      } catch (err) {
+        console.error('Failed to fetch order group:', err);
+        setError('Failed to load your orders. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchOrderGroup();
+  }, [orderGroupId]);
+  
   // Set up Socket.io connection for real-time updates
   useEffect(() => {
     if (orderId) {
@@ -86,7 +126,26 @@ export const OrderStatus = ({ currentOrder, orderId }: OrderStatusProps) => {
         // The parent component will handle the actual status update
       });
     }
-  }, [orderId]);
+    
+    // For group orders, listen to each order's updates
+    if (orderGroupId && groupOrders.length > 0) {
+      const socket = getSocket();
+      groupOrders.forEach(order => {
+        joinCustomerRoom(order.id);
+      });
+      
+      onOrderStatusUpdate((data) => {
+        console.log('Group order status updated:', data);
+        // Update the specific order in the group
+        setGroupOrders(prev => 
+          prev.map(order => 
+            order.id === data.orderId ? { ...order, ...data.order } : order
+          )
+        );
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderId, orderGroupId, groupOrders.length]);
 
   const getStepStatus = (stepId: string) => {
     if (!currentOrder) return "pending";
@@ -183,6 +242,136 @@ export const OrderStatus = ({ currentOrder, orderId }: OrderStatusProps) => {
     );
   }
 
+  // Multi-restaurant order view
+  if (orderGroupId && groupOrders.length > 0) {
+    const totalAmount = groupOrders.reduce((sum, order) => sum + order.grandTotal, 0);
+    const allServed = groupOrders.every(order => order.status === 'served');
+    const anyPreparing = groupOrders.some(order => order.status === 'preparing');
+    const allReady = groupOrders.every(order => order.status === 'ready' || order.status === 'served');
+    
+    return (
+      <div className="space-y-6">
+        {/* Multi-Restaurant Order Summary */}
+        <Card className="restaurant-card">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">Your Food Court Order</h3>
+                <p className="text-xs text-muted-foreground">
+                  {groupOrders.length} {groupOrders.length === 1 ? 'restaurant' : 'restaurants'} • Total: ₹{totalAmount}
+                </p>
+              </div>
+              <Badge 
+                className={`${
+                  allServed ? "bg-status-available" :
+                  allReady ? "bg-status-available" :
+                  anyPreparing ? "bg-restaurant-orange" :
+                  "bg-yellow-500"
+                } text-white`}
+              >
+                {allServed ? "All Served" : allReady ? "All Ready" : anyPreparing ? "Preparing" : "Received"}
+              </Badge>
+            </div>
+          </div>
+        </Card>
+
+        {/* Individual Restaurant Orders */}
+        {groupOrders.map((order, index) => {
+          const orderStepStatus = (stepId: string) => {
+            const stepIndex = statusSteps.findIndex(step => step.id === stepId);
+            const currentIndex = statusSteps.findIndex(step => step.id === order.status);
+            if (currentIndex === -1) return "pending";
+            if (stepIndex < currentIndex) return "completed";
+            if (stepIndex === currentIndex) return "current";
+            return "pending";
+          };
+
+          return (
+            <Card key={order.id} className="restaurant-card">
+              <div className="space-y-4">
+                {/* Restaurant Info */}
+                {order.restaurant && (
+                  <div className="flex items-center space-x-3 pb-3 border-b">
+                    <div className="text-2xl">
+                      {order.restaurant.image || '🍽️'}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold">{order.restaurant.name}</h4>
+                      <p className="text-xs text-muted-foreground">{order.restaurant.cuisine}</p>
+                    </div>
+                    <Badge 
+                      className={`${
+                        order.status === "pending" ? "bg-yellow-500" :
+                        order.status === "paid" ? "bg-green-500" :
+                        order.status === "preparing" ? "bg-restaurant-orange" :
+                        order.status === "ready" ? "bg-status-available" :
+                        "bg-restaurant-grey-500"
+                      } text-white`}
+                    >
+                      {statusSteps.find(step => step.id === order.status)?.label || order.status}
+                    </Badge>
+                  </div>
+                )}
+
+                {/* Order Number and Time */}
+                <div className="flex items-center justify-between text-sm">
+                  <div>
+                    <p className="font-medium">Order #{order.orderNumber}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(order.createdAt).toLocaleTimeString()}
+                    </p>
+                  </div>
+                  <p className="font-semibold">₹{order.grandTotal}</p>
+                </div>
+
+                {/* Order Items */}
+                <div className="space-y-2 border-t pt-3">
+                  <p className="text-sm font-medium">Items:</p>
+                  {order.orderItems.map((item) => (
+                    <div key={item.id} className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {item.quantity}x {item.menuItem.name}
+                      </span>
+                      <span>₹{item.price * item.quantity}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Compact Status Timeline */}
+                <div className="pt-3 border-t">
+                  <div className="flex items-center justify-between">
+                    {statusSteps.slice(0, 4).map((step, idx) => {
+                      const status = orderStepStatus(step.id);
+                      const Icon = step.icon;
+                      
+                      return (
+                        <div key={step.id} className="flex flex-col items-center flex-1">
+                          <div className={`
+                            h-8 w-8 rounded-full flex items-center justify-center transition-all
+                            ${status === "completed" ? "bg-status-available text-white" :
+                              status === "current" ? "bg-restaurant-orange text-white ring-4 ring-restaurant-orange/20" :
+                              "bg-gray-200 text-gray-400"}
+                          `}>
+                            <Icon className="h-4 w-4" />
+                          </div>
+                          {idx < statusSteps.slice(0, 4).length - 1 && (
+                            <div className={`h-0.5 w-full -mt-4 ${
+                              status === "completed" ? "bg-status-available" : "bg-gray-200"
+                            }`} />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    );
+  }
+
   if (!currentOrder) {
     return (
       <Card className="restaurant-card text-center py-12">
@@ -198,6 +387,20 @@ export const OrderStatus = ({ currentOrder, orderId }: OrderStatusProps) => {
       {/* Order Summary */}
       <Card className="restaurant-card">
         <div className="space-y-4">
+          {/* Restaurant Info */}
+          {currentOrder.restaurant && (
+            <div className="flex items-center space-x-3 pb-3 border-b">
+              <div className="text-2xl">
+                {currentOrder.restaurant.image || '🍽️'}
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Ordered from</p>
+                <h4 className="font-semibold">{currentOrder.restaurant.name}</h4>
+                <p className="text-xs text-muted-foreground">{currentOrder.restaurant.cuisine}</p>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold">Order #{currentOrder.orderNumber}</h3>
@@ -226,7 +429,7 @@ export const OrderStatus = ({ currentOrder, orderId }: OrderStatusProps) => {
           </div>
 
           <div className="space-y-2">
-            {currentOrder.orderItems.map((item: { id: string; quantity: number; menuItem: { name: string } }) => (
+            {currentOrder.orderItems.map((item) => (
               <div key={item.id} className="flex justify-between text-sm">
                 <span>{item.quantity}x {item.menuItem.name}</span>
                 <span className="font-medium">₹{item.price * item.quantity}</span>

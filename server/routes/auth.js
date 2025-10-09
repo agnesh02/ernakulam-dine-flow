@@ -16,7 +16,18 @@ router.post('/login', async (req, res) => {
     }
 
     // Find staff by comparing hashed PIN
-    const allStaff = await prisma.staff.findMany();
+    const allStaff = await prisma.staff.findMany({
+      include: {
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            cuisine: true,
+            image: true,
+          },
+        },
+      },
+    });
     let staff = null;
 
     for (const s of allStaff) {
@@ -31,9 +42,14 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid PIN' });
     }
 
-    // Generate JWT token
+    // Generate JWT token with restaurant context
     const token = jwt.sign(
-      { id: staff.id, name: staff.name, role: staff.role },
+      { 
+        id: staff.id, 
+        name: staff.name, 
+        role: staff.role,
+        restaurantId: staff.restaurantId,
+      },
       process.env.JWT_SECRET || 'your-secret-key-change-in-production',
       { expiresIn: '8h' }
     );
@@ -44,6 +60,8 @@ router.post('/login', async (req, res) => {
         id: staff.id,
         name: staff.name,
         role: staff.role,
+        restaurantId: staff.restaurantId,
+        restaurant: staff.restaurant,
       },
     });
   } catch (error) {

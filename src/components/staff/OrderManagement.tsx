@@ -96,9 +96,11 @@ export const OrderManagement = () => {
   useEffect(() => {
     fetchOrders();
     
-    // Set up Socket.io for real-time updates
+    // Set up Socket.io for real-time updates with restaurant context
     const socket = getSocket();
-    joinStaffRoom();
+    const staffInfo = localStorage.getItem('staffInfo');
+    const restaurantId = staffInfo ? JSON.parse(staffInfo).restaurantId : null;
+    joinStaffRoom(restaurantId);
 
     // Listen for new orders
     onNewOrder((order) => {

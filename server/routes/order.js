@@ -15,7 +15,16 @@ const generateOrderNumber = () => {
   return `${prefix}-${timestamp}${random}`;
 };
 
+// Helper function to generate order group ID
+const generateOrderGroupId = () => {
+  const prefix = 'GRP';
+  const timestamp = Date.now().toString();
+  const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+  return `${prefix}-${timestamp}-${random}`;
+};
+
 // Create new order (public - for customers)
+// MULTI-RESTAURANT: Creates separate orders per restaurant
 router.post('/', async (req, res) => {
   try {
     const { items, customerEmail, customerPhone, paymentMethod, orderType } = req.body;
@@ -24,13 +33,13 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Order must contain at least one item' });
     }
 
-    // Calculate totals
-    let totalAmount = 0;
-    const orderItems = [];
+    // Group items by restaurant
+    const itemsByRestaurant = new Map();
 
     for (const item of items) {
       const menuItem = await prisma.menuItem.findUnique({
         where: { id: item.menuItemId },
+        include: { restaurant: true },
       });
 
       if (!menuItem) {
@@ -41,10 +50,15 @@ router.post('/', async (req, res) => {
         return res.status(400).json({ error: `${menuItem.name} is currently unavailable` });
       }
 
-      const itemTotal = menuItem.price * item.quantity;
-      totalAmount += itemTotal;
+      // Group by restaurant
+      if (!itemsByRestaurant.has(menuItem.restaurantId)) {
+        itemsByRestaurant.set(menuItem.restaurantId, {
+          restaurant: menuItem.restaurant,
+          items: [],
+        });
+      }
 
-      orderItems.push({
+      itemsByRestaurant.get(menuItem.restaurantId).items.push({
         menuItemId: item.menuItemId,
         quantity: item.quantity,
         price: menuItem.price,
@@ -52,43 +66,122 @@ router.post('/', async (req, res) => {
       });
     }
 
-    const serviceCharge = Math.round(totalAmount * 0.05);
-    const gst = Math.round(totalAmount * 0.18);
-    const grandTotal = totalAmount + serviceCharge + gst;
+    // Create separate order for EACH restaurant
+    const createdOrders = [];
+    const io = req.app.get('io');
+    
+    // Generate a single group ID for all orders in this transaction
+    const orderGroupId = itemsByRestaurant.size > 1 ? generateOrderGroupId() : null;
 
-    // Create order with items
-    const order = await prisma.order.create({
-      data: {
-        orderNumber: generateOrderNumber(),
-        orderType: orderType || 'dine-in', // Default to dine-in if not specified
-        totalAmount,
-        serviceCharge,
-        gst,
-        grandTotal,
-        customerEmail,
-        customerPhone,
-        paymentMethod: paymentMethod || 'cash', // Store payment method preference
-        orderItems: {
-          create: orderItems,
+    for (const [restaurantId, { restaurant, items: restaurantItems }] of itemsByRestaurant) {
+      // Calculate totals for this restaurant
+      let restaurantTotal = 0;
+      for (const item of restaurantItems) {
+        restaurantTotal += item.price * item.quantity;
+      }
+
+      const serviceCharge = Math.round(restaurantTotal * 0.05);
+      const gst = Math.round(restaurantTotal * 0.18);
+      const grandTotal = restaurantTotal + serviceCharge + gst;
+
+      // Create order for this restaurant
+      const order = await prisma.order.create({
+        data: {
+          orderNumber: generateOrderNumber(),
+          orderGroupId, // Link orders from same transaction
+          orderType: orderType || 'dine-in',
+          totalAmount: restaurantTotal,
+          serviceCharge,
+          gst,
+          grandTotal,
+          customerEmail,
+          customerPhone,
+          paymentMethod: paymentMethod || 'cash',
+          restaurantId,
+          orderItems: {
+            create: restaurantItems,
+          },
         },
-      },
+        include: {
+          orderItems: {
+            include: {
+              menuItem: true,
+            },
+          },
+          restaurant: {
+            select: {
+              id: true,
+              name: true,
+              cuisine: true,
+              image: true,
+            },
+          },
+        },
+      });
+
+      createdOrders.push(order);
+
+      // Emit socket event to this restaurant's staff
+      io.to(`staff:${restaurantId}`).emit('order:new', order);
+    }
+
+    // Also emit to general staff room
+    io.to('staff').emit('order:new', { orders: createdOrders });
+
+    // Return all created orders with group ID
+    res.status(201).json({
+      message: `Created ${createdOrders.length} order(s)`,
+      orders: createdOrders,
+      totalOrders: createdOrders.length,
+      orderGroupId, // Return the group ID for tracking
+    });
+  } catch (error) {
+    console.error('Error creating order:', error);
+    res.status(500).json({ error: 'Failed to create order' });
+  }
+});
+
+// Get all orders in a group (public - for tracking multi-restaurant orders)
+// MUST BE BEFORE /:id route to avoid conflict
+router.get('/group/:orderGroupId', async (req, res) => {
+  try {
+    const { orderGroupId } = req.params;
+    
+    const orders = await prisma.order.findMany({
+      where: { orderGroupId },
       include: {
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            cuisine: true,
+            image: true,
+            preparationTime: true,
+          },
+        },
         orderItems: {
           include: {
             menuItem: true,
           },
         },
       },
+      orderBy: {
+        createdAt: 'asc',
+      },
     });
 
-    // Emit socket event to staff
-    const io = req.app.get('io');
-    io.to('staff').emit('order:new', order);
+    if (!orders || orders.length === 0) {
+      return res.status(404).json({ error: 'No orders found for this group' });
+    }
 
-    res.status(201).json(order);
+    res.json({
+      orders,
+      totalOrders: orders.length,
+      orderGroupId,
+    });
   } catch (error) {
-    console.error('Error creating order:', error);
-    res.status(500).json({ error: 'Failed to create order' });
+    console.error('Error fetching order group:', error);
+    res.status(500).json({ error: 'Failed to fetch order group' });
   }
 });
 
@@ -103,6 +196,15 @@ router.get('/:id', async (req, res) => {
         orderItems: {
           include: {
             menuItem: true,
+          },
+        },
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            cuisine: true,
+            image: true,
+            preparationTime: true,
           },
         },
       },
@@ -122,9 +224,20 @@ router.get('/:id', async (req, res) => {
 // Get all orders (staff only)
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { status } = req.query;
+    const { status, restaurantId } = req.query;
 
-    const where = status ? { status } : {};
+    const where = {};
+    
+    if (status) {
+      where.status = status;
+    }
+    
+    // Filter by restaurant - if staff, use their restaurant; if admin, allow filtering
+    if (req.user.role !== 'admin' && req.user.restaurantId) {
+      where.restaurantId = req.user.restaurantId;
+    } else if (restaurantId) {
+      where.restaurantId = restaurantId;
+    }
 
     const orders = await prisma.order.findMany({
       where,
@@ -132,6 +245,14 @@ router.get('/', authenticateToken, async (req, res) => {
         orderItems: {
           include: {
             menuItem: true,
+          },
+        },
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            cuisine: true,
+            image: true,
           },
         },
       },
@@ -165,6 +286,14 @@ router.patch('/:id/status', authenticateToken, async (req, res) => {
             menuItem: true,
           },
         },
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            cuisine: true,
+            image: true,
+          },
+        },
       },
     });
 
@@ -172,7 +301,8 @@ router.patch('/:id/status', authenticateToken, async (req, res) => {
     const io = req.app.get('io');
     io.to(`customer:${id}`).emit('order:statusUpdate', { orderId: id, status, order });
     
-    // Also notify staff
+    // Also notify restaurant-specific staff and general staff
+    io.to(`staff:${order.restaurantId}`).emit('order:statusUpdate', { orderId: id, status, order });
     io.to('staff').emit('order:statusUpdate', { orderId: id, status, order });
 
     res.json(order);
@@ -191,11 +321,14 @@ router.post('/create-prepayment', async (req, res) => {
       return res.status(400).json({ error: 'Items array is required' });
     }
 
-    // Calculate totals (same logic as order creation)
+    // Calculate totals - MULTI-RESTAURANT SUPPORT
     let totalAmount = 0;
+    const restaurantIds = new Set();
+    
     for (const item of items) {
       const menuItem = await prisma.menuItem.findUnique({
         where: { id: item.menuItemId },
+        include: { restaurant: true },
       });
 
       if (!menuItem) {
@@ -205,6 +338,9 @@ router.post('/create-prepayment', async (req, res) => {
       if (!menuItem.isAvailable) {
         return res.status(400).json({ error: `${menuItem.name} is currently unavailable` });
       }
+
+      // Track all restaurants in this order
+      restaurantIds.add(menuItem.restaurantId);
 
       const itemTotal = menuItem.price * item.quantity;
       totalAmount += itemTotal;
@@ -288,6 +424,7 @@ router.post('/:id/create-payment', async (req, res) => {
 });
 
 // Verify prepayment and CREATE order (only after payment succeeds)
+// MULTI-RESTAURANT: Creates separate orders per restaurant
 router.post('/verify-prepayment', async (req, res) => {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, items, orderType } = req.body;
@@ -324,23 +461,28 @@ router.post('/verify-prepayment', async (req, res) => {
 
     console.log('✅ Payment signature verified successfully');
 
-    // Payment verified! Now create the actual order
-    let totalAmount = 0;
-    const orderItems = [];
+    // Group items by restaurant
+    const itemsByRestaurant = new Map();
 
     for (const item of items) {
       const menuItem = await prisma.menuItem.findUnique({
         where: { id: item.menuItemId },
+        include: { restaurant: true },
       });
 
       if (!menuItem) {
         return res.status(404).json({ error: `Menu item ${item.menuItemId} not found` });
       }
 
-      const itemTotal = menuItem.price * item.quantity;
-      totalAmount += itemTotal;
+      // Group by restaurant
+      if (!itemsByRestaurant.has(menuItem.restaurantId)) {
+        itemsByRestaurant.set(menuItem.restaurantId, {
+          restaurant: menuItem.restaurant,
+          items: [],
+        });
+      }
 
-      orderItems.push({
+      itemsByRestaurant.get(menuItem.restaurantId).items.push({
         menuItemId: item.menuItemId,
         quantity: item.quantity,
         price: menuItem.price,
@@ -348,50 +490,85 @@ router.post('/verify-prepayment', async (req, res) => {
       });
     }
 
-    const serviceCharge = Math.round(totalAmount * 0.05);
-    const gst = Math.round(totalAmount * 0.18);
-    const grandTotal = totalAmount + serviceCharge + gst;
+    // Create separate PAID order for EACH restaurant
+    const createdOrders = [];
+    const io = req.app.get('io');
+    
+    // Generate a single group ID for all orders in this transaction
+    const orderGroupId = itemsByRestaurant.size > 1 ? generateOrderGroupId() : null;
 
-    // Create order with PAID status
-    const order = await prisma.order.create({
-      data: {
-        orderNumber: generateOrderNumber(),
-        orderType: orderType || 'dine-in', // Default to dine-in if not specified
-        totalAmount,
-        serviceCharge,
-        gst,
-        grandTotal,
-        paymentMethod: 'online',
-        paymentStatus: 'paid', // Already paid!
-        status: 'paid', // Mark as paid immediately
-        orderItems: {
-          create: orderItems,
-        },
-      },
-      include: {
-        orderItems: {
-          include: {
-            menuItem: true,
+    for (const [restaurantId, { restaurant, items: restaurantItems }] of itemsByRestaurant) {
+      // Calculate totals for this restaurant
+      let restaurantTotal = 0;
+      for (const item of restaurantItems) {
+        restaurantTotal += item.price * item.quantity;
+      }
+
+      const serviceCharge = Math.round(restaurantTotal * 0.05);
+      const gst = Math.round(restaurantTotal * 0.18);
+      const grandTotal = restaurantTotal + serviceCharge + gst;
+
+      // Create PAID order for this restaurant
+      const order = await prisma.order.create({
+        data: {
+          orderNumber: generateOrderNumber(),
+          orderGroupId, // Link orders from same transaction
+          orderType: orderType || 'dine-in',
+          totalAmount: restaurantTotal,
+          serviceCharge,
+          gst,
+          grandTotal,
+          paymentMethod: 'online',
+          paymentStatus: 'paid',
+          status: 'paid',
+          restaurantId,
+          orderItems: {
+            create: restaurantItems,
           },
         },
-      },
-    });
+        include: {
+          orderItems: {
+            include: {
+              menuItem: true,
+            },
+          },
+          restaurant: {
+            select: {
+              id: true,
+              name: true,
+              cuisine: true,
+              image: true,
+            },
+          },
+        },
+      });
 
-    console.log('✅ Order created successfully:', {
-      orderId: order.id,
-      orderNumber: order.orderNumber,
-      grandTotal: order.grandTotal,
-      status: order.status,
-      paymentStatus: order.paymentStatus
-    });
+      createdOrders.push(order);
 
-    // NOW emit socket event to staff (order is confirmed and paid)
-    const io = req.app.get('io');
-    io.to('staff').emit('order:new', order);
-    io.emit('order:paid', { orderId: order.id, order });
+      console.log(`✅ Order created for ${restaurant.name}:`, {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        grandTotal: order.grandTotal,
+      });
 
+      // Emit socket event to this restaurant's staff
+      io.to(`staff:${restaurantId}`).emit('order:new', order);
+      io.emit('order:paid', { orderId: order.id, order });
+    }
+
+    // Also emit to general staff room
+    io.to('staff').emit('order:new', { orders: createdOrders });
+
+    console.log(`✅ Created ${createdOrders.length} order(s) successfully`);
     console.log('✅ Sending success response to frontend');
-    res.json({ success: true, order });
+    
+    res.json({ 
+      success: true, 
+      orders: createdOrders,
+      message: `Payment successful! Created ${createdOrders.length} order(s)`,
+      totalOrders: createdOrders.length,
+      orderGroupId, // Return the group ID for tracking
+    });
   } catch (error) {
     console.error('❌ Error verifying prepayment:', error);
     console.error('Error stack:', error.stack);

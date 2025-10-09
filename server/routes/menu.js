@@ -8,13 +8,32 @@ const prisma = new PrismaClient();
 // Get all menu items (public - for customers)
 router.get('/', async (req, res) => {
   try {
-    const { available } = req.query;
+    const { available, restaurantId } = req.query;
     
-    const where = available === 'true' ? { isAvailable: true } : {};
+    const where = {};
+    
+    if (available === 'true') {
+      where.isAvailable = true;
+    }
+    
+    if (restaurantId) {
+      where.restaurantId = restaurantId;
+    }
     
     const menuItems = await prisma.menuItem.findMany({
       where,
       orderBy: { name: 'asc' },
+      include: {
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            cuisine: true,
+            image: true,
+            rating: true,
+          },
+        },
+      },
     });
 
     res.json(menuItems);
@@ -30,6 +49,16 @@ router.get('/:id', async (req, res) => {
     const { id } = req.params;
     const menuItem = await prisma.menuItem.findUnique({
       where: { id },
+      include: {
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            cuisine: true,
+            image: true,
+          },
+        },
+      },
     });
 
     if (!menuItem) {
@@ -64,7 +93,14 @@ router.patch('/:id/availability', authenticateToken, async (req, res) => {
 // Create menu item (staff only)
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { name, category, price, description, prepTime, tags, isAvailable, isVegetarian, image } = req.body;
+    const { name, category, price, description, prepTime, tags, isAvailable, isVegetarian, image, restaurantId } = req.body;
+
+    // If no restaurantId provided, use the staff's restaurant
+    const finalRestaurantId = restaurantId || req.user.restaurantId;
+
+    if (!finalRestaurantId) {
+      return res.status(400).json({ error: 'Restaurant ID is required' });
+    }
 
     const menuItem = await prisma.menuItem.create({
       data: {
@@ -77,6 +113,16 @@ router.post('/', authenticateToken, async (req, res) => {
         isAvailable: isAvailable !== undefined ? isAvailable : true,
         isVegetarian: isVegetarian !== undefined ? isVegetarian : true,
         image,
+        restaurantId: finalRestaurantId,
+      },
+      include: {
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            cuisine: true,
+          },
+        },
       },
     });
 
@@ -93,6 +139,22 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { name, category, price, description, prepTime, tags, isAvailable, isVegetarian, image } = req.body;
 
+    // Verify the menu item belongs to the staff's restaurant (unless admin)
+    if (req.user.role !== 'admin') {
+      const existingItem = await prisma.menuItem.findUnique({
+        where: { id },
+        select: { restaurantId: true },
+      });
+
+      if (!existingItem) {
+        return res.status(404).json({ error: 'Menu item not found' });
+      }
+
+      if (existingItem.restaurantId !== req.user.restaurantId) {
+        return res.status(403).json({ error: 'You can only update menu items from your restaurant' });
+      }
+    }
+
     const updatedItem = await prisma.menuItem.update({
       where: { id },
       data: {
@@ -105,6 +167,15 @@ router.put('/:id', authenticateToken, async (req, res) => {
         isAvailable,
         isVegetarian,
         image,
+      },
+      include: {
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            cuisine: true,
+          },
+        },
       },
     });
 

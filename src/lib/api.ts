@@ -61,10 +61,56 @@ export const authAPI = {
   },
 };
 
+// Restaurant API
+export const restaurantAPI = {
+  getAll: async (activeOnly = true) => {
+    const query = activeOnly ? '?active=true' : '';
+    return withMinimumDelay(authFetch(`/restaurants${query}`));
+  },
+
+  getById: async (id: string) => {
+    return authFetch(`/restaurants/${id}`);
+  },
+
+  getStats: async (id: string) => {
+    return authFetch(`/restaurants/${id}/stats`);
+  },
+
+  create: async (restaurantData: any) => {
+    return authFetch('/restaurants', {
+      method: 'POST',
+      body: JSON.stringify(restaurantData),
+    });
+  },
+
+  update: async (id: string, restaurantData: any) => {
+    return authFetch(`/restaurants/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(restaurantData),
+    });
+  },
+
+  updateStatus: async (id: string, isActive: boolean) => {
+    return authFetch(`/restaurants/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isActive }),
+    });
+  },
+
+  delete: async (id: string) => {
+    return authFetch(`/restaurants/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
 // Menu API
 export const menuAPI = {
-  getAll: async (availableOnly = false) => {
-    const query = availableOnly ? '?available=true' : '';
+  getAll: async (availableOnly = false, restaurantId?: string) => {
+    const params = new URLSearchParams();
+    if (availableOnly) params.append('available', 'true');
+    if (restaurantId) params.append('restaurantId', restaurantId);
+    const query = params.toString() ? `?${params.toString()}` : '';
     return withMinimumDelay(authFetch(`/menu${query}`));
   },
 
@@ -119,8 +165,17 @@ export const orderAPI = {
     return authFetch(`/orders/${id}`);
   },
 
-  getAll: async (status?: string) => {
-    const query = status ? `?status=${status}` : '';
+  getByGroupId: async (orderGroupId: string) => {
+    const response = await fetch(`${API_BASE_URL}/orders/group/${orderGroupId}`);
+    if (!response.ok) throw new Error('Failed to fetch order group');
+    return response.json();
+  },
+
+  getAll: async (status?: string, restaurantId?: string) => {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (restaurantId) params.append('restaurantId', restaurantId);
+    const query = params.toString() ? `?${params.toString()}` : '';
     return withMinimumDelay(authFetch(`/orders${query}`));
   },
 

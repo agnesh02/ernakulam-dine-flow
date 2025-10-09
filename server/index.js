@@ -7,6 +7,7 @@ import authRoutes from './routes/auth.js';
 import menuRoutes from './routes/menu.js';
 import orderRoutes from './routes/order.js';
 import staffRoutes from './routes/staff.js';
+import restaurantRoutes from './routes/restaurant.js';
 import { authenticateToken } from './middleware/auth.js';
 
 dotenv.config();
@@ -29,6 +30,7 @@ app.set('io', io);
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/staff', authenticateToken, staffRoutes);
@@ -47,9 +49,14 @@ io.on('connection', (socket) => {
   });
 
   // Join specific rooms for targeted notifications
-  socket.on('join:staff', () => {
+  socket.on('join:staff', (restaurantId) => {
     socket.join('staff');
-    console.log('Staff joined:', socket.id);
+    if (restaurantId) {
+      socket.join(`staff:${restaurantId}`);
+      console.log(`Staff joined restaurant ${restaurantId}:`, socket.id);
+    } else {
+      console.log('Staff joined (general):', socket.id);
+    }
   });
 
   socket.on('join:customer', (orderId) => {
