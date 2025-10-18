@@ -1,10 +1,19 @@
 import Razorpay from 'razorpay';
 
 // Initialize Razorpay with credentials from environment
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET
-});
+let razorpay = null;
+try {
+  if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+    razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET
+    });
+  } else {
+    console.warn('⚠️  Razorpay credentials not configured. Payment transfers will be disabled.');
+  }
+} catch (error) {
+  console.warn('⚠️  Razorpay initialization failed:', error.message);
+}
 
 /**
  * Transfer payment to a restaurant's linked Razorpay account
@@ -13,6 +22,19 @@ const razorpay = new Razorpay({
  * @returns {Promise<Object>} Transfer result
  */
 async function transferToRestaurant(order, paymentId) {
+  if (!razorpay) {
+    console.warn('⚠️  Razorpay not initialized. Skipping transfer.');
+    return {
+      success: false,
+      reason: 'razorpay_not_configured',
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      restaurant: order.restaurant.name,
+      amount: order.grandTotal,
+      message: 'Razorpay is not configured'
+    };
+  }
+
   try {
     // Calculate platform commission
     const commissionRate = order.restaurant.commissionRate || 0.10;
@@ -148,6 +170,13 @@ async function transferForOrderGroup(orders, paymentId) {
  * @returns {Promise<Object>} Transfer details
  */
 async function getTransferStatus(transferId) {
+  if (!razorpay) {
+    return {
+      success: false,
+      error: 'Razorpay is not configured'
+    };
+  }
+
   try {
     const transfer = await razorpay.transfers.fetch(transferId);
     return {

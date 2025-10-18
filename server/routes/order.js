@@ -28,7 +28,7 @@ const generateOrderGroupId = () => {
 // MULTI-RESTAURANT: Creates separate orders per restaurant
 router.post('/', async (req, res) => {
   try {
-    const { items, customerEmail, customerPhone, paymentMethod, orderType } = req.body;
+    const { items, customerEmail, customerPhone, paymentMethod, orderType, existingOrderGroupId } = req.body;
 
     if (!items || items.length === 0) {
       return res.status(400).json({ error: 'Order must contain at least one item' });
@@ -71,8 +71,8 @@ router.post('/', async (req, res) => {
     const createdOrders = [];
     const io = req.app.get('io');
     
-    // Generate a single group ID for all orders in this transaction
-    const orderGroupId = itemsByRestaurant.size > 1 ? generateOrderGroupId() : null;
+    // Use existing orderGroupId if provided (for continuous ordering), or generate new one for multi-restaurant orders
+    const orderGroupId = existingOrderGroupId || (itemsByRestaurant.size > 1 ? generateOrderGroupId() : null);
 
     for (const [restaurantId, { restaurant, items: restaurantItems }] of itemsByRestaurant) {
       // Calculate totals for this restaurant
@@ -428,7 +428,7 @@ router.post('/:id/create-payment', async (req, res) => {
 // MULTI-RESTAURANT: Creates separate orders per restaurant
 router.post('/verify-prepayment', async (req, res) => {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, items, orderType } = req.body;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, items, orderType, existingOrderGroupId } = req.body;
 
     console.log('🔍 Verify prepayment called:', {
       razorpay_order_id,
@@ -495,8 +495,8 @@ router.post('/verify-prepayment', async (req, res) => {
     const createdOrders = [];
     const io = req.app.get('io');
     
-    // Generate a single group ID for all orders in this transaction
-    const orderGroupId = itemsByRestaurant.size > 1 ? generateOrderGroupId() : null;
+    // Use existing orderGroupId if provided (for continuous ordering), or generate new one for multi-restaurant orders
+    const orderGroupId = existingOrderGroupId || (itemsByRestaurant.size > 1 ? generateOrderGroupId() : null);
 
     for (const [restaurantId, { restaurant, items: restaurantItems }] of itemsByRestaurant) {
       // Calculate totals for this restaurant

@@ -27,15 +27,18 @@ dist-ssr
 .env
 .env.local
 .env.production
+.env.development.local
+.env.test.local
+.env.production.local
 
 # Database
 *.db
 *.db-journal
 
-# Build output
-build/
+# Next.js
 .next/
 out/
+build/
 
 # Misc
 .cache

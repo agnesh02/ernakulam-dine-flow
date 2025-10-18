@@ -1,299 +1,209 @@
-# RestaurantOS - Full-Stack Restaurant Management System
+# Ernakulam Dine Flow - Restaurant Management System
 
-A modern, full-stack restaurant management system built with React, Express, PostgreSQL, and Socket.io for real-time order management.
+A modern restaurant management system built with Next.js 15, featuring real-time order tracking, payment integration, and multi-restaurant support.
 
-## 🎉 Features
-
-### Customer Features
-- 📱 **Digital Menu** - Browse menu items with search and category filters
-- 🛒 **Order Placement** - Add items to cart and place orders
-- 📊 **Real-time Order Tracking** - Track order status from placed to served
-- 💳 **Payment Integration** - Mock payment system (UPI/Card)
-
-### Staff Features
-- 🔐 **PIN-based Authentication** - Secure staff login with JWT
-- 📦 **Order Management** - View and manage all orders in real-time
-- 🍽️ **Menu Control** - Toggle menu item availability
-- 🔔 **Live Notifications** - Real-time alerts for new orders via Socket.io
-
-### Technical Features
-- ⚡ **Real-time Updates** - Socket.io for instant order notifications
-- 🔒 **Secure Authentication** - JWT-based staff authentication
-- 🗄️ **PostgreSQL Database** - Robust data persistence with Prisma ORM
-- 📡 **RESTful API** - Clean API architecture
-- 🎨 **Modern UI** - Beautiful, responsive design with Tailwind CSS & shadcn/ui
-
-## 🏗️ Project Structure
-
-```
-ernakulam-dine-flow/
-├── src/                      # Frontend (React + TypeScript)
-│   ├── components/
-│   │   ├── customer/        # Customer-facing components
-│   │   ├── staff/           # Staff dashboard components
-│   │   └── ui/              # shadcn/ui components
-│   ├── lib/
-│   │   ├── api.ts           # API client functions
-│   │   └── socket.ts        # Socket.io client setup
-│   └── ...
-├── server/                   # Backend (Express + Node.js)
-│   ├── routes/              # API routes
-│   ├── middleware/          # Auth middleware
-│   ├── prisma/              # Database schema & migrations
-│   └── index.js             # Server entry point
-└── ...
-```
-
-## 🚀 Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
-
-- **Node.js** (v18 or higher)
-- **MongoDB** (Atlas free tier or local installation)
-- **npm** or **pnpm**
+- Node.js 18+ 
+- MongoDB (Atlas or local)
+- npm or yarn
 
 ### Installation
 
-#### Option 1: Automated Setup (Recommended)
-
 ```bash
-# Clone the repository
-git clone https://github.com/agnesh02Backup/ernakulam-dine-flow.git
-cd ernakulam-dine-flow
-
-# Run the complete setup (installs all dependencies and sets up database)
-npm run setup
-```
-
-#### Option 2: Manual Setup
-
-```bash
-# 1. Install frontend dependencies
+# Install frontend dependencies
 npm install
 
-# 2. Install backend dependencies
+# Install backend dependencies
 cd server
 npm install
-
-# 3. Set up database
-npm run db:setup  # This runs: prisma generate + prisma db push + seed
 cd ..
 ```
 
-### Database Configuration
+### Environment Setup
 
-1. **MongoDB Atlas (Recommended - FREE!):**
-   - Go to [MongoDB Atlas](https://cloud.mongodb.com)
-   - Create a free M0 cluster
-   - Get your connection string
-   - See [MONGODB_SETUP.md](./MONGODB_SETUP.md) for detailed steps
-
-2. **Update the database connection string** in `server/.env`:
-   ```env
-   DATABASE_URL="mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/restaurantos?retryWrites=true&w=majority"
-   ```
-
-3. **Alternative: Local MongoDB:**
-   - Install MongoDB Community Server
-   - Use: `DATABASE_URL="mongodb://localhost:27017/restaurantos"`
-
-### Environment Variables
-
-#### Frontend (.env in root)
+Create a `.env.local` file in the root:
 ```env
-VITE_API_URL=http://localhost:3000/api
+NEXT_PUBLIC_API_URL=http://localhost:3000/api
+NEXT_PUBLIC_RAZORPAY_KEY_ID=your_razorpay_key_here
 ```
 
-#### Backend (server/.env)
+Create a `.env` file in the `server/` directory:
 ```env
-# Database (MongoDB)
-DATABASE_URL="mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/restaurantos?retryWrites=true&w=majority"
-
-# Server
+DATABASE_URL=mongodb+srv://username:password@cluster.mongodb.net/ernakulam_dine_flow
+JWT_SECRET=your-super-secret-jwt-key
+RAZORPAY_KEY_ID=your_razorpay_key_here
+RAZORPAY_KEY_SECRET=your_razorpay_secret_here
 PORT=3000
-CLIENT_URL=http://localhost:5173
-
-# JWT Secret (CHANGE IN PRODUCTION!)
-JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-
-# Node Environment
 NODE_ENV=development
 ```
 
-## 🎮 Running the Application
+### Running the Application
 
-### Development Mode
-
-#### Run Everything Together (Recommended)
 ```bash
+# Run both frontend and backend together (recommended)
 npm run dev:full
-```
-This starts both frontend (port 5173) and backend (port 3000) concurrently.
 
-#### Run Separately
-```bash
-# Terminal 1 - Frontend
-npm run dev
-
-# Terminal 2 - Backend
-npm run dev:server
+# Or run separately:
+npm run dev          # Frontend only (port 3000)
+npm run dev:server   # Backend only (port 3000)
 ```
 
-### Access the Application
-
-- **Frontend:** http://localhost:5173
-- **Backend API:** http://localhost:3000/api
-- **Prisma Studio:** Run `cd server && npm run db:studio` (database GUI)
-
-### Default Login Credentials
-
-**Staff PIN:** `1234`
-
-You can create more staff members using the API or Prisma Studio.
-
-## 📚 API Documentation
-
-### Authentication
-- `POST /api/auth/login` - Staff login with PIN
-- `GET /api/auth/verify` - Verify JWT token
-
-### Menu
-- `GET /api/menu` - Get all menu items
-- `GET /api/menu?available=true` - Get available items only
-- `PATCH /api/menu/:id/availability` - Toggle availability (Auth required)
-
-### Orders
-- `POST /api/orders` - Create new order (Public)
-- `GET /api/orders/:id` - Get order by ID
-- `GET /api/orders` - Get all orders (Auth required)
-- `PATCH /api/orders/:id/status` - Update order status (Auth required)
-- `POST /api/orders/:id/payment` - Mark order as paid
-
-### Staff
-- `GET /api/staff` - Get all staff (Auth required)
-- `POST /api/staff` - Create new staff member (Auth required)
-
-## 🔌 WebSocket Events
-
-### Client → Server
-- `join:staff` - Join staff room for notifications
-- `join:customer` - Join customer order room
-
-### Server → Client
-- `order:new` - New order placed
-- `order:statusUpdate` - Order status changed
-- `order:paid` - Payment received
-
-## 🛠️ Database Management
+### Build for Production
 
 ```bash
+# Build frontend
+npm run build
+npm start
+
+# Build backend (runs in server/ directory)
 cd server
-
-# Generate Prisma Client
-npm run db:generate
-
-# Push schema to database (development)
-npm run db:push
-
-# Create migration (production)
-npm run db:migrate
-
-# Seed database with sample data
-npm run db:seed
-
-# Open Prisma Studio (database GUI)
-npm run db:studio
+npm start
 ```
 
-## 📦 Building for Production
+## 🏗️ Tech Stack
 
 ### Frontend
-```bash
-npm run build
-# Output: dist/
-```
+- **Framework**: Next.js 15 (App Router)
+- **UI Library**: React 18
+- **Styling**: Tailwind CSS
+- **Components**: shadcn/ui (Radix UI)
+- **State Management**: TanStack Query
+- **Real-time**: Socket.io Client
+- **Forms**: React Hook Form + Zod
+- **Payments**: Razorpay
 
 ### Backend
-The backend runs directly with Node.js. No build step needed.
+- **Runtime**: Node.js + Express
+- **Database**: MongoDB + Prisma ORM
+- **Authentication**: JWT
+- **Real-time**: Socket.io
+- **Payment Gateway**: Razorpay
 
-## 🚢 Deployment
+## 📱 Features
 
-### Frontend (Vercel/Netlify)
-1. Connect your GitHub repository
-2. Set build command: `npm run build`
-3. Set output directory: `dist`
-4. Add environment variable: `VITE_API_URL=https://your-backend-url.com/api`
+### Customer Interface
+- Browse digital menu with images and descriptions
+- Real-time order status tracking
+- Multiple payment options (Cash, UPI, Card)
+- Multi-restaurant ordering support
+- Split payment functionality
+- Order history
 
-### Backend (Railway/Render/Heroku)
-1. Deploy the `server` directory
-2. Add PostgreSQL database addon
-3. Set environment variables (DATABASE_URL, JWT_SECRET, etc.)
-4. Start command: `npm start`
+### Staff Interface
+- PIN-based authentication
+- Real-time order management
+- Menu control (availability, pricing)
+- Order history and analytics
+- Multi-restaurant management
+- Table management (coming soon)
 
-### Database (Production)
-- Use MongoDB Atlas (free M0 tier)
-- Push schema: `npm run db:push`
-- Seed data: `npm run db:seed`
+## 🛠️ Project Structure
 
-## 🗒️ Notes
-
-### Table Management
-The table management feature is temporarily commented out. To re-enable:
-1. Open `src/components/staff/StaffDashboard.tsx`
-2. Uncomment the table management tab and content
-3. Add table tracking to the database schema
-
-### Future Enhancements
-- [ ] Real payment gateway integration (Stripe, Razorpay)
-- [ ] Table management system
-- [ ] Staff roles & permissions
-- [ ] Kitchen display system (KDS)
-- [ ] Analytics dashboard
-- [ ] Multi-restaurant support
-- [ ] Mobile apps (React Native)
-
-## 🐛 Troubleshooting
-
-### Database Connection Issues
-```bash
-# For MongoDB Atlas:
-# 1. Check internet connection
-# 2. Verify IP is whitelisted (0.0.0.0/0 for development)
-# 3. Check username/password in connection string
-
-# For local MongoDB:
-# Check if MongoDB is running
-mongosh --eval "db.version()"
+```
+ernakulam-dine-flow/
+├── app/                    # Next.js App Router
+│   ├── customer/          # Customer interface route
+│   ├── staff/             # Staff interface route
+│   ├── components/        # React components
+│   │   ├── customer/     # Customer UI components
+│   │   ├── staff/        # Staff UI components
+│   │   └── ui/           # shadcn/ui components
+│   ├── hooks/            # Custom React hooks
+│   ├── lib/              # Utilities
+│   │   ├── api.ts        # API client
+│   │   ├── socket.ts     # Socket.io client
+│   │   └── razorpay.ts   # Razorpay integration
+│   ├── layout.tsx         # Root layout
+│   ├── page.tsx           # Landing page
+│   └── providers.tsx      # Client-side providers
+│
+├── server/               # Backend API
+│   ├── prisma/          # Database schema & migrations
+│   ├── routes/          # API routes
+│   ├── services/        # Business logic
+│   └── middleware/      # Express middleware
+│
+└── public/              # Static assets
 ```
 
-### Port Already in Use
-```bash
-# Kill process on port 3000
-npx kill-port 3000
+## 📋 Available Scripts
 
-# Kill process on port 5173
-npx kill-port 5173
+```bash
+# Frontend
+npm run dev          # Start development server
+npm run build        # Build for production
+npm start            # Start production server
+npm run lint         # Run ESLint
+
+# Backend
+npm run dev:server   # Start backend dev server
+npm run server:install   # Install backend dependencies
+npm run server:setup     # Setup database
+
+# Combined
+npm run dev:full     # Run frontend + backend together
+npm run setup        # Complete project setup
 ```
 
-### Prisma Issues
+## 🔧 Configuration
+
+### Next.js Configuration
+See `next.config.js` for:
+- Webpack configuration (Socket.io support)
+- Build optimization
+- Custom settings
+
+### Database Setup
 ```bash
 cd server
 npx prisma generate
-npx prisma db push --force-reset  # ⚠️ This deletes all data!
+npx prisma db push
+npx prisma db seed  # Optional: Seed test data
 ```
+
+## 🚀 Deployment
+
+### Frontend (Vercel/Netlify)
+1. Build: `npm run build`
+2. Deploy the `.next` output directory
+3. Set environment variables in hosting platform
+
+### Backend (Railway/Heroku/VPS)
+1. Push to Git repository
+2. Set environment variables
+3. Database connection string
+4. Deploy from `server/` directory
+
+## 🐛 Troubleshooting
+
+### Port Already in Use
+```bash
+# Kill process on port 3000 (Windows)
+npx kill-port 3000
+
+# Or change port in next.config.js and server/.env
+```
+
+### Database Connection Issues
+- Verify MongoDB connection string
+- Check network access in MongoDB Atlas
+- Ensure database user has proper permissions
+
+### Socket.io Not Connecting
+- Check CORS settings in `server/index.js`
+- Verify `NEXT_PUBLIC_API_URL` matches backend URL
+- Ensure both frontend and backend are running
 
 ## 📄 License
 
-MIT
+Private - All Rights Reserved
 
-## 👨‍💻 Author
+## 👥 Support
 
-Built with ❤️ for modern restaurants
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+For issues and questions, please contact the development team.
 
 ---
 
-**Happy Coding! 🍽️**
+**Note**: This is a Next.js application. The migration from Vite to Next.js is complete and all features are functional.
