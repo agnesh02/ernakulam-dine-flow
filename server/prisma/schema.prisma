@@ -11,19 +11,28 @@ datasource db {
 }
 
 model Restaurant {
-  id          String     @id @default(auto()) @map("_id") @db.ObjectId
-  name        String
-  description String
-  image       String?
-  cuisine     String     // e.g., "Indian", "Chinese", "Italian", "Fast Food"
-  isActive    Boolean    @default(true)
-  rating      Float      @default(4.0)
-  preparationTime Int    @default(20) // average preparation time in minutes
-  menuItems   MenuItem[]
-  staff       Staff[]
-  orders      Order[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id                String     @id @default(auto()) @map("_id") @db.ObjectId
+  name              String
+  description       String
+  image             String?
+  cuisine           String     // e.g., "Indian", "Chinese", "Italian", "Fast Food"
+  isActive          Boolean    @default(true)
+  rating            Float      @default(4.0)
+  preparationTime   Int        @default(20) // average preparation time in minutes
+  
+  // Payment & Settlement Fields
+  razorpayAccountId String?    // Razorpay linked account ID for split payments
+  bankAccountNumber String?
+  bankIfsc          String?
+  bankAccountName   String?
+  settlementSchedule String    @default("instant") // instant, daily, weekly
+  commissionRate    Float      @default(0.10) // Platform commission (10%)
+  
+  menuItems         MenuItem[]
+  staff             Staff[]
+  orders            Order[]
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 }
 
 model Staff {
@@ -56,24 +65,34 @@ model MenuItem {
 }
 
 model Order {
-  id             String      @id @default(auto()) @map("_id") @db.ObjectId
-  orderNumber    String      @unique
-  orderGroupId   String?     // Links multiple orders from same transaction
-  status         String      @default("pending") // pending, paid, preparing, ready, served, cancelled
-  orderType      String      @default("dine-in") // dine-in or takeaway
-  totalAmount    Int
-  serviceCharge  Int
-  gst            Int
-  grandTotal     Int
-  paymentStatus  String      @default("unpaid") // unpaid, paid
-  paymentMethod  String?
-  customerEmail  String?
-  customerPhone  String?
-  restaurantId   String      @db.ObjectId
-  restaurant     Restaurant  @relation(fields: [restaurantId], references: [id])
-  orderItems     OrderItem[]
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  id                 String      @id @default(auto()) @map("_id") @db.ObjectId
+  orderNumber        String      @unique
+  orderGroupId       String?     // Links multiple orders from same transaction
+  status             String      @default("pending") // pending, paid, preparing, ready, served, cancelled
+  orderType          String      @default("dine-in") // dine-in or takeaway
+  totalAmount        Int
+  serviceCharge      Int
+  gst                Int
+  grandTotal         Int
+  paymentStatus      String      @default("unpaid") // unpaid, paid
+  paymentMethod      String?
+  customerEmail      String?
+  customerPhone      String?
+  restaurantId       String      @db.ObjectId
+  restaurant         Restaurant  @relation(fields: [restaurantId], references: [id])
+  
+  // Transfer & Settlement Fields for Split Payments
+  razorpayPaymentId  String?     // Original payment ID from Razorpay
+  transferId         String?     // Razorpay transfer ID to restaurant
+  transferAmount     Int?        // Amount transferred to restaurant (after commission)
+  platformCommission Int?        // Commission kept by platform
+  transferStatus     String?     // created, pending, processed, reversed, failed
+  settlementStatus   String      @default("pending") // pending, completed, failed
+  settledAt          DateTime?
+  
+  orderItems         OrderItem[]
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
   
   @@index([orderGroupId])
 }

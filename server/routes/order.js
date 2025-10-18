@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.js';
 import razorpay from '../config/razorpay.js';
 import crypto from 'crypto';
+import { transferForOrderGroup } from '../services/paymentTransfer.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -560,6 +561,56 @@ router.post('/verify-prepayment', async (req, res) => {
     io.to('staff').emit('order:new', { orders: createdOrders });
 
     console.log(`✅ Created ${createdOrders.length} order(s) successfully`);
+    
+    // NEW: Automatically transfer payments to restaurants
+    let transferResults = [];
+    try {
+      console.log('\n💸 Initiating automatic transfers to restaurants...');
+      transferResults = await transferForOrderGroup(createdOrders, razorpay_payment_id);
+      
+      // Update orders with transfer information
+      for (let i = 0; i < createdOrders.length; i++) {
+        const order = createdOrders[i];
+        const transferResult = transferResults[i];
+
+        if (transferResult.success) {
+          await prisma.order.update({
+            where: { id: order.id },
+            data: {
+              razorpayPaymentId: razorpay_payment_id,
+              transferId: transferResult.transferId,
+              transferAmount: transferResult.transferAmount,
+              platformCommission: transferResult.platformCommission,
+              transferStatus: transferResult.transferStatus,
+              settlementStatus: 'completed',
+              settledAt: new Date(),
+            }
+          });
+          console.log(`✅ Order ${order.orderNumber} updated with transfer info`);
+        } else {
+          // Mark for manual settlement if transfer failed
+          await prisma.order.update({
+            where: { id: order.id },
+            data: {
+              razorpayPaymentId: razorpay_payment_id,
+              transferStatus: 'failed',
+              settlementStatus: 'pending',
+            }
+          });
+          console.warn(`⚠️  Order ${order.orderNumber} marked for manual settlement`);
+        }
+      }
+    } catch (transferError) {
+      console.error('❌ Error during transfer process:', transferError);
+      // Don't fail the order creation, just log it
+      transferResults = createdOrders.map(order => ({
+        success: false,
+        orderId: order.id,
+        error: 'Transfer service unavailable',
+        message: 'Order created but automatic transfer failed. Will be settled manually.'
+      }));
+    }
+    
     console.log('✅ Sending success response to frontend');
     
     res.json({ 
@@ -568,6 +619,7 @@ router.post('/verify-prepayment', async (req, res) => {
       message: `Payment successful! Created ${createdOrders.length} order(s)`,
       totalOrders: createdOrders.length,
       orderGroupId, // Return the group ID for tracking
+      transfers: transferResults, // Include transfer information
     });
   } catch (error) {
     console.error('❌ Error verifying prepayment:', error);
