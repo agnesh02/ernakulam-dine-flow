@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Clock, ChefHat, Utensils, AlertCircle, Loader2, RefreshCw } from "lucide-react";
+import { CheckCircle, Clock, ChefHat, Utensils, AlertCircle, RefreshCw, Sparkles } from "lucide-react";
 import { getSocket, joinCustomerRoom, onOrderStatusUpdate } from "@/lib/socket";
 import { orderAPI } from "@/lib/api";
 
@@ -119,7 +119,7 @@ export const OrderStatus = ({ currentOrder, orderId, orderGroupId, onStartNewOrd
   // Set up Socket.io connection for real-time updates
   useEffect(() => {
     if (orderId) {
-      const socket = getSocket();
+      getSocket();
       joinCustomerRoom(orderId);
 
       // Listen for order status updates
@@ -131,7 +131,7 @@ export const OrderStatus = ({ currentOrder, orderId, orderGroupId, onStartNewOrd
     
     // For group orders, listen to each order's updates
     if (orderGroupId && groupOrders.length > 0) {
-      const socket = getSocket();
+      getSocket();
       groupOrders.forEach(order => {
         joinCustomerRoom(order.id);
       });
@@ -249,36 +249,92 @@ export const OrderStatus = ({ currentOrder, orderId, orderGroupId, onStartNewOrd
     const totalAmount = groupOrders.reduce((sum, order) => sum + order.grandTotal, 0);
     const allServed = groupOrders.every(order => order.status === 'served');
     const anyPreparing = groupOrders.some(order => order.status === 'preparing');
+    const anyReady = groupOrders.some(order => order.status === 'ready');
     const allReady = groupOrders.every(order => order.status === 'ready' || order.status === 'served');
     
     return (
       <div className="space-y-6">
-        {/* Multi-Restaurant Order Summary */}
-        <Card className="restaurant-card">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold">Your Food Court Order</h3>
-                <p className="text-xs text-muted-foreground">
-                  {groupOrders.length} {groupOrders.length === 1 ? 'restaurant' : 'restaurants'} • Total: ₹{totalAmount}
+        {/* Enhanced Multi-Restaurant Order Summary */}
+        <Card className="restaurant-card overflow-hidden">
+          {/* Hero Section */}
+          <div className={`relative px-6 py-4 bg-gradient-to-br ${
+            allServed ? "from-gray-500/10 via-gray-500/5 to-transparent" :
+            allReady ? "from-green-500/10 via-green-500/5 to-transparent" :
+            anyPreparing ? "from-orange-500/10 via-orange-500/5 to-transparent" :
+            "from-blue-500/10 via-blue-500/5 to-transparent"
+          }`}>
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge 
+                    className={`${
+                      allServed ? "bg-gray-500" :
+                      allReady ? "bg-green-500" :
+                      anyPreparing ? "bg-orange-500 animate-pulse" :
+                      "bg-blue-500"
+                    } text-white shadow-lg`}
+                  >
+                    {allServed ? "All Served" : allReady ? "All Ready" : anyPreparing ? "Preparing" : "Confirmed"}
+                  </Badge>
+                  {(anyPreparing || anyReady) && (
+                    <Sparkles className="h-4 w-4 text-orange-500 animate-pulse" />
+                  )}
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-1">
+                  🍽️ Food Court Order
+                </h3>
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <span className="font-medium">{groupOrders.length} {groupOrders.length === 1 ? 'Restaurant' : 'Restaurants'}</span>
+                  <span className="w-1 h-1 rounded-full bg-gray-400"></span>
+                  <span>{groupOrders.reduce((sum, o) => sum + o.orderItems.length, 0)} Total Items</span>
                 </p>
               </div>
-              <Badge 
-                className={`${
-                  allServed ? "bg-status-available" :
-                  allReady ? "bg-status-available" :
-                  anyPreparing ? "bg-restaurant-orange" :
-                  "bg-yellow-500"
-                } text-white`}
-              >
-                {allServed ? "All Served" : allReady ? "All Ready" : anyPreparing ? "Preparing" : "Received"}
-              </Badge>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground mb-1">Total Amount</p>
+                <p className="text-3xl font-bold text-primary">₹{totalAmount}</p>
+              </div>
+            </div>
+
+            {/* Overall Progress Indicator */}
+            <div className="mt-4">
+              <div className="flex items-center justify-between mb-2 text-xs font-medium text-gray-700">
+                <span>Overall Progress</span>
+                <span>{Math.round((groupOrders.filter(o => o.status === 'served').length / groupOrders.length) * 100)}% Complete</span>
+              </div>
+              <div className="relative w-full bg-gray-200 rounded-full h-3 overflow-hidden shadow-inner">
+                <div 
+                  className="h-3 rounded-full transition-all duration-1000 ease-out bg-green-500"
+                  style={{ 
+                    width: `${(groupOrders.filter(o => o.status === 'served').length / groupOrders.length) * 100}%` 
+                  }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer bg-[length:200%_100%]"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Orders Summary Grid */}
+          <div className="px-0 py-4">
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <p className="text-2xl font-bold text-gray-900">{groupOrders.length}</p>
+                <p className="text-xs text-muted-foreground mt-1">Restaurants</p>
+              </div>
+              <div className="p-3 bg-orange-50 rounded-lg">
+                <p className="text-2xl font-bold text-orange-600">{groupOrders.filter(o => o.status === 'preparing').length}</p>
+                <p className="text-xs text-muted-foreground mt-1">Preparing</p>
+              </div>
+              <div className="p-3 bg-green-50 rounded-lg">
+                <p className="text-2xl font-bold text-green-600">{groupOrders.filter(o => o.status === 'served').length}</p>
+                <p className="text-xs text-muted-foreground mt-1">Served</p>
+              </div>
             </div>
           </div>
         </Card>
 
-        {/* Individual Restaurant Orders */}
-        {groupOrders.map((order, index) => {
+        {/* Individual Restaurant Orders with Enhanced Design */}
+        {groupOrders.map((order) => {
           const orderStepStatus = (stepId: string) => {
             const stepIndex = statusSteps.findIndex(step => step.id === stepId);
             const currentIndex = statusSteps.findIndex(step => step.id === order.status);
@@ -289,104 +345,180 @@ export const OrderStatus = ({ currentOrder, orderId, orderGroupId, onStartNewOrd
           };
 
           return (
-            <Card key={order.id} className="restaurant-card">
-              <div className="space-y-4">
-                {/* Restaurant Info */}
+            <Card key={order.id} className={`restaurant-card overflow-hidden transition-all duration-300 ${
+              order.status === 'preparing' ? 'border-2 border-orange-200 shadow-lg' :
+              order.status === 'ready' ? 'border-2 border-green-200 shadow-lg animate-pulse' :
+              ''
+            }`}>
+              {/* Restaurant Header with Status */}
+              <div className={`relative px-4 py-3 bg-gradient-to-r ${
+                order.status === "pending" ? "from-yellow-50 to-transparent" :
+                order.status === "paid" ? "from-emerald-50 to-transparent" :
+                order.status === "preparing" ? "from-orange-50 to-transparent" :
+                order.status === "ready" ? "from-green-50 to-transparent" :
+                "from-gray-50 to-transparent"
+              }`}>
                 {order.restaurant && (
-                  <div className="flex items-center space-x-3 pb-3 border-b">
-                    <div className="text-2xl">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-white shadow-sm text-2xl">
                       {order.restaurant.image || '🍽️'}
                     </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold">{order.restaurant.name}</h4>
-                      <p className="text-xs text-muted-foreground">{order.restaurant.cuisine}</p>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-gray-900 truncate">{order.restaurant.name}</h4>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                        {order.restaurant.cuisine}
+                      </p>
                     </div>
                     <Badge 
                       className={`${
                         order.status === "pending" ? "bg-yellow-500" :
-                        order.status === "paid" ? "bg-green-500" :
-                        order.status === "preparing" ? "bg-restaurant-orange" :
-                        order.status === "ready" ? "bg-status-available" :
-                        "bg-restaurant-grey-500"
-                      } text-white`}
+                        order.status === "paid" ? "bg-emerald-500" :
+                        order.status === "preparing" ? "bg-orange-500 animate-pulse" :
+                        order.status === "ready" ? "bg-green-500 animate-pulse" :
+                        "bg-gray-500"
+                      } text-white shadow-md font-semibold`}
                     >
                       {statusSteps.find(step => step.id === order.status)?.label || order.status}
                     </Badge>
                   </div>
                 )}
+              </div>
 
-                {/* Order Number and Time */}
-                <div className="flex items-center justify-between text-sm">
+              <div className="px-4 py-3 space-y-3">
+                {/* Order Number and Amount */}
+                <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">Order #{order.orderNumber}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(order.createdAt).toLocaleTimeString()}
+                    <p className="text-sm font-bold text-gray-900">Order #{order.orderNumber}</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      <Clock className="h-3 w-3" />
+                      {new Date(order.createdAt).toLocaleTimeString('en-IN', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
                     </p>
                   </div>
-                  <p className="font-semibold">₹{order.grandTotal}</p>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">Amount</p>
+                    <p className="text-xl font-bold text-primary">₹{order.grandTotal}</p>
+                  </div>
                 </div>
 
-                {/* Order Items */}
-                <div className="space-y-2 border-t pt-3">
-                  <p className="text-sm font-medium">Items:</p>
+                {/* Order Items with Modern Styling */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Items</h5>
+                    <Badge variant="secondary" className="text-xs">
+                      {order.orderItems.length} {order.orderItems.length === 1 ? 'item' : 'items'}
+                    </Badge>
+                  </div>
+                  <div className="space-y-1.5">
                   {order.orderItems.map((item) => (
-                    <div key={item.id} className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        {item.quantity}x {item.menuItem.name}
+                      <div key={item.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary font-bold text-xs">
+                            {item.quantity}×
                       </span>
-                      <span>₹{item.price * item.quantity}</span>
+                          <span className="font-medium text-gray-800">{item.menuItem.name}</span>
+                        </div>
+                        <span className="font-semibold text-gray-900">₹{item.price * item.quantity}</span>
                     </div>
                   ))}
+                  </div>
                 </div>
 
-                {/* Compact Status Timeline */}
-                <div className="pt-3 border-t">
-                  <div className="flex items-center justify-between">
-                    {statusSteps.slice(0, 4).map((step, idx) => {
+                {/* Enhanced Status Timeline */}
+                <div className="pt-2">
+                  <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">Progress</p>
+                  <div className="relative">
+                    {/* Progress Line - spans from first to last icon */}
+                    <div className="absolute top-4 left-4 right-4 h-1 bg-gray-200 rounded-full"></div>
+                    <div 
+                      className="absolute top-4 left-4 h-1 rounded-full transition-all duration-1000 bg-green-500"
+                      style={{
+                        width: `calc((100% - 2rem) * ${(() => {
+                          const currentIndex = statusSteps.findIndex(step => step.id === order.status);
+                          return currentIndex >= 0 ? currentIndex / (statusSteps.length - 1) : 0;
+                        })()})`
+                      }}
+                    ></div>
+                    
+                    {/* Status Icons */}
+                    <div className="relative flex items-center justify-between w-full">
+                      {statusSteps.map((step) => {
                       const status = orderStepStatus(step.id);
                       const Icon = step.icon;
                       
                       return (
-                        <div key={step.id} className="flex flex-col items-center flex-1">
+                          <div key={step.id} className="flex flex-col items-center">
                           <div className={`
-                            h-8 w-8 rounded-full flex items-center justify-center transition-all
-                            ${status === "completed" ? "bg-status-available text-white" :
-                              status === "current" ? "bg-restaurant-orange text-white ring-4 ring-restaurant-orange/20" :
-                              "bg-gray-200 text-gray-400"}
-                          `}>
-                            <Icon className="h-4 w-4" />
-                          </div>
-                          {idx < statusSteps.slice(0, 4).length - 1 && (
-                            <div className={`h-0.5 w-full -mt-4 ${
-                              status === "completed" ? "bg-status-available" : "bg-gray-200"
-                            }`} />
-                          )}
+                              w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 relative z-10
+                              ${status === "completed" ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/30" :
+                                status === "current" ? "bg-gradient-to-br from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/30 scale-110" :
+                                "bg-white border-2 border-gray-200 text-gray-400"}
+                            `}>
+                              <Icon className="h-3.5 w-3.5" />
+                              {status === "current" && (
+                                <div className="absolute inset-0 rounded-lg bg-orange-500 animate-ping opacity-30"></div>
+                              )}
+                            </div>
+                            <p className={`text-[9px] mt-1.5 font-medium text-center leading-tight whitespace-nowrap ${
+                              status === "current" ? "text-orange-600" :
+                              status === "completed" ? "text-green-600" :
+                              "text-gray-400"
+                            }`}>
+                              {step.id === 'pending' ? 'Placed' :
+                               step.id === 'paid' ? 'Paid' :
+                               step.id === 'preparing' ? 'Cooking' :
+                               step.id === 'ready' ? 'Ready' :
+                               'Served'}
+                            </p>
                         </div>
                       );
                     })}
+                    </div>
                   </div>
                 </div>
+
+                {/* Status-specific Messages */}
+                {order.status === 'preparing' && (
+                  <div className="flex items-center gap-2 text-xs text-orange-700 bg-orange-50 px-3 py-2 rounded-lg border border-orange-100">
+                    <ChefHat className="h-3.5 w-3.5 animate-bounce flex-shrink-0" />
+                    <span className="font-semibold">Being prepared in the kitchen...</span>
+                  </div>
+                )}
+                {order.status === 'ready' && (
+                  <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 px-3 py-2 rounded-lg border border-green-100 animate-pulse">
+                    <Sparkles className="h-3.5 w-3.5 flex-shrink-0" />
+                    <span className="font-semibold">Ready - Will be served shortly!</span>
+                  </div>
+                )}
               </div>
             </Card>
           );
         })}
 
-        {/* Order More Button for Multi-Restaurant Orders */}
+        {/* Enhanced Order More Button for Multi-Restaurant Orders */}
         {allServed && onStartNewOrder && (
-          <Card className="restaurant-card bg-gradient-to-r from-primary/10 to-transparent border-primary/20">
-            <div className="text-center space-y-4">
+          <Card className="restaurant-card bg-gradient-to-br from-primary/10 via-purple-50/30 to-transparent border-2 border-primary/30 shadow-xl overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-primary/20 to-transparent rounded-full -mr-20 -mt-20"></div>
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-purple-200/20 to-transparent rounded-full -ml-16 -mb-16"></div>
+            <div className="relative text-center space-y-4 p-2">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/40 mb-2">
+                <CheckCircle className="h-8 w-8" />
+              </div>
               <div>
-                <h4 className="font-semibold text-lg text-gray-900 mb-2">Enjoyed your meal?</h4>
-                <p className="text-sm text-gray-600">
-                  Order more from any restaurant in our food court!
+                <h4 className="font-bold text-2xl text-gray-900 mb-2">All Orders Served! 🎉</h4>
+                <p className="text-sm text-gray-600 max-w-md mx-auto leading-relaxed">
+                  We hope you enjoyed your meal from {groupOrders.length} amazing {groupOrders.length === 1 ? 'restaurant' : 'restaurants'}! Order more delicious food anytime.
                 </p>
               </div>
               <Button
                 onClick={onStartNewOrder}
-                className="w-full sm:w-auto restaurant-gradient-accent text-white hover:opacity-90 shadow-lg hover:shadow-xl transition-all"
+                className="w-full sm:w-auto bg-gradient-to-r from-primary via-purple-600 to-pink-600 text-white hover:opacity-90 shadow-lg hover:shadow-xl transition-all hover:scale-105 font-bold"
                 size="lg"
               >
-                <RefreshCw className="h-4 w-4 mr-2" />
+                <RefreshCw className="h-5 w-5 mr-2" />
                 Order More Food
               </Button>
             </div>
@@ -408,244 +540,215 @@ export const OrderStatus = ({ currentOrder, orderId, orderGroupId, onStartNewOrd
 
   return (
     <div className="space-y-6">
-      {/* Order Summary */}
-      <Card className="restaurant-card">
-        <div className="space-y-4">
-          {/* Restaurant Info */}
+      {/* Single Restaurant Order Card - Matching Multi-Restaurant Design */}
+      <Card className={`restaurant-card overflow-hidden transition-all duration-300 ${
+        currentOrder.status === 'preparing' ? 'border-2 border-orange-200 shadow-lg' :
+        currentOrder.status === 'ready' ? 'border-2 border-green-200 shadow-lg animate-pulse' :
+        ''
+      }`}>
+        {/* Restaurant Header with Status */}
+        <div className={`relative px-4 py-3 bg-gradient-to-r ${
+          currentOrder.status === "pending" ? "from-yellow-50 to-transparent" :
+          currentOrder.status === "paid" ? "from-emerald-50 to-transparent" :
+          currentOrder.status === "preparing" ? "from-orange-50 to-transparent" :
+          currentOrder.status === "ready" ? "from-green-50 to-transparent" :
+          "from-gray-50 to-transparent"
+        }`}>
           {currentOrder.restaurant && (
-            <div className="flex items-center space-x-3 pb-3 border-b">
-              <div className="text-2xl">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-white shadow-sm text-2xl">
                 {currentOrder.restaurant.image || '🍽️'}
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Ordered from</p>
-                <h4 className="font-semibold">{currentOrder.restaurant.name}</h4>
-                <p className="text-xs text-muted-foreground">{currentOrder.restaurant.cuisine}</p>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-bold text-gray-900 truncate">{currentOrder.restaurant.name}</h4>
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                  {currentOrder.restaurant.cuisine}
+                </p>
               </div>
+              <Badge 
+                className={`${
+                  currentOrder.status === "pending" ? "bg-yellow-500" :
+                  currentOrder.status === "paid" ? "bg-emerald-500" :
+                  currentOrder.status === "preparing" ? "bg-orange-500 animate-pulse" :
+                  currentOrder.status === "ready" ? "bg-green-500 animate-pulse" :
+                  "bg-gray-500"
+                } text-white shadow-md font-semibold`}
+              >
+                {statusSteps.find(step => step.id === currentOrder.status)?.label || currentOrder.status}
+              </Badge>
             </div>
           )}
+        </div>
 
+        <div className="px-4 py-3 space-y-3">
+          {/* Order Number and Amount */}
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold">Order #{currentOrder.orderNumber}</h3>
-              <p className="text-xs text-muted-foreground">
-                {new Date(currentOrder.createdAt).toLocaleString()}
+              <p className="text-sm font-bold text-gray-900">Order #{currentOrder.orderNumber}</p>
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Clock className="h-3 w-3" />
+                {new Date(currentOrder.createdAt).toLocaleTimeString('en-IN', { 
+                  hour: '2-digit', 
+                  minute: '2-digit' 
+                })}
               </p>
             </div>
-            <Badge 
-              className={`${
-                currentOrder.status === "pending" ? "bg-yellow-500" :
-                currentOrder.status === "paid" ? "bg-green-500" :
-                currentOrder.status === "preparing" ? "bg-restaurant-orange" :
-                currentOrder.status === "ready" ? "bg-status-available" :
-                "bg-restaurant-grey-500"
-              } text-white`}
-            >
-              {statusSteps.find(step => step.id === currentOrder.status)?.label || currentOrder.status}
-            </Badge>
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">Amount</p>
+              <p className="text-xl font-bold text-primary">₹{currentOrder.grandTotal}</p>
+            </div>
           </div>
           
-          <div className="flex items-center justify-between text-sm mb-2 pb-2 border-b">
-            <span className="text-muted-foreground">Order Type:</span>
+          {/* Order Type Badge */}
+          <div className="flex items-center gap-2">
             <Badge variant="outline" className="capitalize">
               {currentOrder.orderType === 'takeaway' ? '🛍️ Takeaway' : '🍽️ Dine-In'}
             </Badge>
+            {(currentOrder.status === "preparing" || currentOrder.status === "ready") && (
+              <div className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-full ${
+                currentOrder.status === "preparing" ? "bg-orange-100 text-orange-700" :
+                "bg-green-100 text-green-700"
+              }`}>
+                <Clock className="h-3 w-3" />
+                <span className="font-semibold">ETA: {getEstimatedTime()}</span>
+              </div>
+            )}
           </div>
 
+          {/* Order Items with Modern Styling */}
           <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Items</h5>
+              <Badge variant="secondary" className="text-xs">
+                {currentOrder.orderItems.length} {currentOrder.orderItems.length === 1 ? 'item' : 'items'}
+              </Badge>
+            </div>
+            <div className="space-y-1.5">
             {currentOrder.orderItems.map((item) => (
-              <div key={item.id} className="flex justify-between text-sm">
-                <span>{item.quantity}x {item.menuItem.name}</span>
-                <span className="font-medium">₹{item.price * item.quantity}</span>
+                <div key={item.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary font-bold text-xs">
+                      {item.quantity}×
+                    </span>
+                    <span className="font-medium text-gray-800">{item.menuItem.name}</span>
+                  </div>
+                  <span className="font-semibold text-gray-900">₹{item.price * item.quantity}</span>
               </div>
             ))}
-          </div>
-          
-          <div className="space-y-1 text-sm border-t pt-2">
-            <div className="flex justify-between">
-              <span>Subtotal</span>
-              <span>₹{currentOrder.totalAmount}</span>
-            </div>
-            <div className="flex justify-between text-muted-foreground">
-              <span>Service Charge</span>
-              <span>₹{currentOrder.serviceCharge}</span>
-            </div>
-            <div className="flex justify-between text-muted-foreground">
-              <span>GST</span>
-              <span>₹{currentOrder.gst}</span>
             </div>
           </div>
           
-          <div className="flex justify-between font-semibold text-lg border-t pt-2">
-            <span>Grand Total</span>
-            <span className="text-primary">₹{currentOrder.grandTotal}</span>
-          </div>
-
-          <div className="flex items-center justify-between text-sm bg-restaurant-grey-50 p-3 rounded-lg">
-            <div className="flex items-center space-x-2">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Estimated time:</span>
+          {/* Bill Breakdown */}
+          <div className="space-y-1.5 pt-2 border-t">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Subtotal</span>
+              <span className="font-medium">₹{currentOrder.totalAmount}</span>
             </div>
-            <span className="font-medium">{getEstimatedTime()}</span>
-          </div>
-        </div>
-      </Card>
-
-      {/* Progress Timeline */}
-      <Card className="restaurant-card">
-        <div className="space-y-6">
-          <div className="space-y-4">
-            <div className="text-center">
-              <h3 className="text-xl font-bold text-gray-800 mb-2">Order Progress</h3>
-              <p className="text-sm text-gray-600">Track your order status in real-time</p>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Service Charge</span>
+              <span className="font-medium">₹{currentOrder.serviceCharge}</span>
             </div>
-            
-            {/* Progress Bar */}
-            <div className="px-4">
-              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden shadow-inner">
-                <div 
-                  className="h-3 bg-gradient-to-r from-green-500 to-blue-500 rounded-full transition-all duration-1000 ease-out shadow-sm"
-                  style={{ 
-                    width: `${(() => {
-                      if (!currentOrder) return 0;
-                      const currentIndex = statusSteps.findIndex(step => step.id === currentOrder.status);
-                      return currentIndex >= 0 ? ((currentIndex + 1) / statusSteps.length) * 100 : 0;
-                    })()}%` 
-                  }}
-                ></div>
-              </div>
-              <div className="flex justify-between text-xs text-gray-500 mt-2">
-                <span className="font-medium">Started</span>
-                <span className="font-semibold text-gray-700 bg-gray-100 px-2 py-1 rounded-full">
-                  {currentOrder ? `${Math.round(((() => {
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">GST (5%)</span>
+              <span className="font-medium">₹{currentOrder.gst}</span>
+            </div>
+            <div className="flex justify-between items-center font-bold text-base border-t pt-2 mt-2">
+              <span className="text-gray-900">Grand Total</span>
+              <span className="text-primary text-xl">₹{currentOrder.grandTotal}</span>
+            </div>
+          </div>
+          
+          {/* Enhanced Status Timeline */}
+          <div className="pt-2">
+            <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">Progress</p>
+            <div className="relative">
+              {/* Progress Line - spans from first to last icon */}
+              <div className="absolute top-4 left-4 right-4 h-1 bg-gray-200 rounded-full"></div>
+              <div 
+                className="absolute top-4 left-4 h-1 rounded-full transition-all duration-1000 bg-green-500"
+                style={{
+                  width: `calc((100% - 2rem) * ${(() => {
                     const currentIndex = statusSteps.findIndex(step => step.id === currentOrder.status);
-                    return currentIndex >= 0 ? ((currentIndex + 1) / statusSteps.length) * 100 : 0;
-                  })()))}% Complete` : "0% Complete"}
-                </span>
-                <span className="font-medium">Delivered</span>
+                    return currentIndex >= 0 ? currentIndex / (statusSteps.length - 1) : 0;
+                  })()})`
+                }}
+              ></div>
+              
+              {/* Status Icons */}
+              <div className="relative flex items-center justify-between w-full">
+                {statusSteps.map((step) => {
+                  const status = getStepStatus(step.id);
+                  const Icon = step.icon;
+                  
+                  return (
+                    <div key={step.id} className="flex flex-col items-center">
+                      <div className={`
+                        w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 relative z-10
+                        ${status === "completed" ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/30" :
+                          status === "current" ? "bg-gradient-to-br from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/30 scale-110" :
+                          "bg-white border-2 border-gray-200 text-gray-400"}
+                      `}>
+                        <Icon className="h-3.5 w-3.5" />
+                        {status === "current" && (
+                          <div className="absolute inset-0 rounded-lg bg-orange-500 animate-ping opacity-30"></div>
+                        )}
+                      </div>
+                      <p className={`text-[9px] mt-1.5 font-medium text-center leading-tight whitespace-nowrap ${
+                        status === "current" ? "text-orange-600" :
+                        status === "completed" ? "text-green-600" :
+                        "text-gray-400"
+                      }`}>
+                        {step.id === 'pending' ? 'Placed' :
+                         step.id === 'paid' ? 'Paid' :
+                         step.id === 'preparing' ? 'Cooking' :
+                         step.id === 'ready' ? 'Ready' :
+                         'Served'}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
-          
-          <div className="space-y-4 px-2">
-            {statusSteps.map((step, index) => {
-              const Icon = step.icon;
-              const status = getStepStatus(step.id);
-              
-              return (
-                <div key={step.id} className="flex items-start space-x-4 relative py-2">
-                  {/* Status Icon */}
-                  <div className={`
-                    flex items-center justify-center w-10 h-10 rounded-full relative
-                    ${status === "completed" ? "bg-green-500 text-white shadow-lg shadow-green-500/30" :
-                      status === "current" ? "bg-blue-500 text-white shadow-lg shadow-blue-500/30" :
-                      "bg-gray-200 text-gray-500"}
-                    transition-all duration-300
-                  `}>
-                    <Icon className="h-5 w-5" />
-                    {status === "current" && (
-                      <div className="absolute inset-0 rounded-full bg-blue-500 animate-ping opacity-20" style={{ animationDuration: '3s' }}></div>
-                    )}
-                    {status === "completed" && (
-                      <div className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-20" style={{ animationDuration: '3s' }}></div>
-                    )}
-                  </div>
-                  
-                  {/* Status Content */}
-                  <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <h4 className={`font-semibold text-base transition-colors duration-300 ${
-                        status === "current" ? "text-blue-600" :
-                        status === "completed" ? "text-green-600" :
-                        "text-gray-500"
-                      }`}>
-                        {step.label}
-                      </h4>
-                      {status === "current" && (
-                        <Badge variant="secondary" className="bg-blue-500 text-white shadow-md">
-                          <div className="flex items-center gap-1">
-                            <div className="w-2 h-2 bg-white rounded-full animate-ping" style={{ animationDuration: '2s' }}></div>
-                            In Progress
-                          </div>
-                        </Badge>
-                      )}
-                      {status === "completed" && (
-                        <Badge variant="secondary" className="bg-green-500 text-white shadow-md">
-                          <div className="flex items-center gap-1">
-                            <div className="w-2 h-2 bg-white rounded-full"></div>
-                            {step.id === "served" ? "Done" : "Completed"}
-                          </div>
-                        </Badge>
-                      )}
-                    </div>
-                    <p className={`text-sm transition-colors duration-300 leading-relaxed ${
-                      status === "current" ? "text-gray-700 font-medium" :
-                      status === "completed" ? "text-gray-600" :
-                      "text-gray-400"
-                    }`}>
-                      {step.description}
-                    </p>
-                  </div>
-                  
-                  {/* Timeline Connector */}
-                  {index < statusSteps.length - 1 && (
-                    <div className={`absolute left-[1.25rem] top-12 w-0.5 h-8 transition-colors duration-500 ${
-                      status === "completed" ? "bg-green-500" : 
-                      status === "current" ? "bg-gradient-to-b from-green-500 to-gray-200" :
-                      "bg-gray-200"
-                    }`} style={{ marginLeft: '1.25rem' }} />
-                  )}
-                </div>
-              );
-            })}
+
+          {/* Status-specific Messages */}
+          {currentOrder.status === 'preparing' && (
+            <div className="flex items-center gap-2 text-xs text-orange-700 bg-orange-50 px-3 py-2 rounded-lg border border-orange-100">
+              <ChefHat className="h-3.5 w-3.5 animate-bounce flex-shrink-0" />
+              <span className="font-semibold">Being prepared in the kitchen...</span>
+            </div>
+          )}
+          {currentOrder.status === 'ready' && (
+            <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 px-3 py-2 rounded-lg border border-green-100 animate-pulse">
+              <Sparkles className="h-3.5 w-3.5 flex-shrink-0" />
+              <span className="font-semibold">Ready - Will be served shortly!</span>
           </div>
+          )}
         </div>
       </Card>
 
-      {/* Special Messages */}
-      {currentOrder.status === "preparing" && (
-        <Card className="restaurant-card bg-restaurant-orange/10 border-restaurant-orange">
-          <div className="flex items-center space-x-3">
-            <ChefHat className="h-6 w-6 text-restaurant-orange" />
-            <div>
-              <h4 className="font-semibold text-restaurant-orange">Kitchen Update</h4>
-              <p className="text-sm text-restaurant-grey-700">
-                Your meal is being freshly prepared by our chef. Thank you for your patience!
-              </p>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {currentOrder.status === "ready" && (
-        <Card className="restaurant-card bg-status-available/10 border-status-available">
-          <div className="flex items-center space-x-3">
-            <Utensils className="h-6 w-6 text-status-available" />
-            <div>
-              <h4 className="font-semibold text-status-available">Ready to Serve!</h4>
-              <p className="text-sm text-restaurant-grey-700">
-                Your delicious meal is ready and our staff will serve it to your table shortly.
-              </p>
-            </div>
-          </div>
-        </Card>
-      )}
-
+      {/* Served completion card */}
       {currentOrder.status === "served" && onStartNewOrder && (
-        <Card className="restaurant-card bg-gradient-to-r from-primary/10 to-transparent border-primary/20">
-          <div className="text-center space-y-4">
+        <Card className="restaurant-card bg-gradient-to-br from-primary/10 via-purple-50/30 to-transparent border-2 border-primary/30 shadow-xl overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-primary/20 to-transparent rounded-full -mr-20 -mt-20"></div>
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-purple-200/20 to-transparent rounded-full -ml-16 -mb-16"></div>
+          <div className="relative text-center space-y-4 p-2">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-500 text-white shadow-lg shadow-primary/40 mb-2">
+              <CheckCircle className="h-8 w-8" />
+            </div>
             <div>
-              <h4 className="font-semibold text-lg text-gray-900 mb-2">Enjoyed your meal?</h4>
-              <p className="text-sm text-gray-600">
-                Order more from any restaurant in our food court!
+              <h4 className="font-bold text-2xl text-gray-900 mb-2">Enjoyed your meal? 😋</h4>
+              <p className="text-sm text-gray-600 max-w-md mx-auto leading-relaxed">
+                We hope you loved your food! Order more delicious meals from any restaurant in our food court!
               </p>
             </div>
             <Button
               onClick={onStartNewOrder}
-              className="w-full sm:w-auto restaurant-gradient-accent text-white hover:opacity-90 shadow-lg hover:shadow-xl transition-all"
+              className="w-full sm:w-auto bg-blue-600 text-white hover:opacity-90 shadow-lg hover:shadow-xl transition-all hover:scale-105 font-bold"
               size="lg"
             >
-              <RefreshCw className="h-4 w-4 mr-2" />
+              <RefreshCw className="h-5 w-5 mr-2" />
               Order More Food
             </Button>
           </div>

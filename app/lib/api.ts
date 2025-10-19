@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 // Minimum loading delay for better UX
 const MINIMUM_LOADING_DELAY = 800;
@@ -62,6 +62,27 @@ export const authAPI = {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('authToken');
       localStorage.removeItem('staffInfo');
+    }
+  },
+
+  isAuthenticated: () => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('authToken');
+      const staffInfo = localStorage.getItem('staffInfo');
+      return !!(token && staffInfo);
+    }
+    return false;
+  },
+
+  getStaffInfo: () => {
+    try {
+      if (typeof window !== 'undefined') {
+        const staffInfo = localStorage.getItem('staffInfo');
+        return staffInfo ? JSON.parse(staffInfo) : null;
+      }
+      return null;
+    } catch {
+      return null;
     }
   },
 };

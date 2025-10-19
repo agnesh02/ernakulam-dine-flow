@@ -4,7 +4,7 @@ import { DigitalMenu } from "./DigitalMenu";
 import { OrderStatus } from "./OrderStatus";
 import { BillPayment } from "./BillPayment";
 import { RestaurantSelection } from "./RestaurantSelection";
-import { Menu, Clock, CreditCard, Loader2 } from "lucide-react";
+import { Store, Menu, Clock, CreditCard } from "lucide-react";
 import { orderAPI } from "@/lib/api";
 import { onOrderStatusUpdate } from "@/lib/socket";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +19,7 @@ export const CustomerApp = () => {
     image?: string;
     rating: number;
     preparationTime: number;
+    isActive?: boolean;
   } | null>(() => {
     // Restore selected restaurant from localStorage
     if (typeof window !== 'undefined') {
@@ -78,7 +79,7 @@ export const CustomerApp = () => {
     createdAt: string;
     updatedAt: string;
   } | null>(null);
-  const [activeTab, setActiveTab] = useState("menu");
+  const [activeTab, setActiveTab] = useState("restaurants");
   const [orderId, setOrderId] = useState<string | null>(() => {
     // Restore orderId from localStorage on mount
     if (typeof window !== 'undefined') {
@@ -161,7 +162,7 @@ export const CustomerApp = () => {
               description: `${parsedCart.length} item(s) restored to your cart.`,
             });
           }
-        } catch (e) {
+        } catch {
           // Invalid cart data, clear it
           localStorage.removeItem('customerCart');
         }
@@ -241,24 +242,21 @@ export const CustomerApp = () => {
     image?: string;
     rating: number;
     preparationTime: number;
+    isActive?: boolean;
   }) => {
     setSelectedRestaurant(restaurant);
-    setActiveTab("menu");
+    setActiveTab("menu"); // Switch to menu tab when restaurant is selected
   };
 
   const handleBackToRestaurants = () => {
-    setSelectedRestaurant(null);
-    // Don't clear cart - allow multi-restaurant orders!
-    // setCart([]); 
-    // localStorage.removeItem('customerCart');
-    localStorage.removeItem('selectedRestaurant');
+    setActiveTab("restaurants"); // Switch back to restaurants tab
   };
 
   const handleStartNewOrder = () => {
     // Only clear cart and selected restaurant (keep order tracking for status/payment tabs)
     setSelectedRestaurant(null);
     setCart([]);
-    setActiveTab("menu");
+    setActiveTab("restaurants"); // Go back to restaurant selection
     
     // Clear from localStorage
     localStorage.removeItem('selectedRestaurant');
@@ -282,7 +280,7 @@ export const CustomerApp = () => {
         {/* Tabs Skeleton */}
         <Card className="restaurant-card">
           <div className="flex space-x-2">
-            {[1, 2, 3].map((i) => (
+            {[1, 2, 3, 4].map((i) => (
               <div key={i} className="h-12 flex-1 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-lg animate-shimmer bg-[length:200%_100%]" />
             ))}
           </div>
@@ -322,40 +320,36 @@ export const CustomerApp = () => {
     );
   }
 
-  // Show restaurant selection if no restaurant is selected (regardless of active orders)
-  if (!selectedRestaurant) {
-    return (
-      <div className="space-y-6">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-primary mb-2">Welcome to Food Court</h2>
-          <p className="text-muted-foreground">Choose from our amazing restaurants</p>
-          {(currentOrder || orderGroupId) && (
-            <p className="text-sm text-primary mt-2">
-              You have active orders. You can add more items from any restaurant!
-            </p>
-          )}
-        </div>
-        <RestaurantSelection onSelectRestaurant={handleSelectRestaurant} />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold text-primary mb-2">
-          {selectedRestaurant ? selectedRestaurant.name : "Customer Experience"}
+          {selectedRestaurant ? selectedRestaurant.name : "Food Court"}
         </h2>
         <p className="text-muted-foreground">
-          {selectedRestaurant ? selectedRestaurant.description : "Mobile-first PWA for guests at the table"}
+          {selectedRestaurant ? selectedRestaurant.description : "Browse restaurants and order from your favorites"}
         </p>
+        {(currentOrder || orderGroupId) && !selectedRestaurant && (
+          <p className="text-sm text-primary mt-2">
+            You have active orders. Select a restaurant to add more items!
+          </p>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-4 sm:mb-6 h-16 bg-restaurant-grey-100">
+        <TabsList className="grid w-full grid-cols-4 mb-4 sm:mb-6 h-16 bg-restaurant-grey-100">
+          <TabsTrigger 
+            value="restaurants" 
+            className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-restaurant-grey-600 hover:bg-restaurant-grey-200 px-2 text-xs sm:text-sm touch-manipulation transition-all duration-200 h-full"
+          >
+            <Store className="h-4 w-4" />
+            <span className="hidden xs:inline">Restaurants</span>
+            <span className="xs:hidden">Shops</span>
+          </TabsTrigger>
           <TabsTrigger 
             value="menu" 
-            className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-restaurant-grey-600 hover:bg-restaurant-grey-200 px-2 text-xs sm:text-sm touch-manipulation transition-all duration-200 h-full"
+            disabled={!selectedRestaurant}
+            className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-restaurant-grey-600 hover:bg-restaurant-grey-200 px-2 text-xs sm:text-sm touch-manipulation transition-all duration-200 h-full disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Menu className="h-4 w-4" />
             <span className="hidden xs:inline">Menu</span>
@@ -384,7 +378,7 @@ export const CustomerApp = () => {
             </div>
             <div className="flex flex-col items-center justify-center">
               <span className="hidden xs:inline">Order Status</span>
-              <span className="xs:hidden">Status</span>
+              {/* <span className="xs:hidden">Status</span>
               {currentOrder && (
                 <div className="flex items-center gap-1">
                   <div className={`w-2 h-2 rounded-full ${
@@ -408,7 +402,7 @@ export const CustomerApp = () => {
                      currentOrder.status === "served" ? "Done" : "Active"}
                   </span>
                 </div>
-              )}
+              )} */}
             </div>
           </TabsTrigger>
           <TabsTrigger 
@@ -420,6 +414,13 @@ export const CustomerApp = () => {
             <span className="xs:hidden">Payment</span>
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="restaurants">
+          <RestaurantSelection 
+            onSelectRestaurant={handleSelectRestaurant}
+            selectedRestaurant={selectedRestaurant}
+          />
+        </TabsContent>
 
         <TabsContent value="menu">
           <DigitalMenu 
