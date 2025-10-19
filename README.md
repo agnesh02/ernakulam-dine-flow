@@ -1,138 +1,209 @@
-# Ernakulam Dine Flow 🍽️
+# Ernakulam Dine Flow - Restaurant Management System
 
-A modern restaurant management system with digital menu and table management capabilities.
+A modern restaurant management system built with Next.js 15, featuring real-time order tracking, payment integration, and multi-restaurant support.
 
-## 🚀 Live Demo
-
-**GitHub Pages**: [https://agnesh02backup.github.io/ernakulam-dine-flow/](https://agnesh02backup.github.io/ernakulam-dine-flow/) ✅ **Live & Working**
-
-## 📋 Features
-
-### Customer Interface
-- **Digital Menu**: Browse food items with categories, ratings, and descriptions
-- **Smart Cart**: Add/remove items with quantity controls
-- **Order Management**: View cart, modify quantities, and place orders
-- **Order Tracking**: Real-time order status updates
-- **Bill & Payment**: Complete payment interface
-
-### Staff Interface
-- **Table Management**: Visual floor plan with table status tracking
-- **Smart Seating**: Flexible seating options and table combinations
-- **Guest Management**: Seat guests with flexible capacity options
-- **Status Updates**: Real-time table status changes (Available, Occupied, Cleaning, Reserved)
-- **Large Group Support**: Combine tables for groups of 6+ people
-
-## 🛠️ Tech Stack
-
-- **Frontend**: React 18 + TypeScript
-- **Build Tool**: Vite
-- **UI Components**: shadcn/ui + Radix UI
-- **Styling**: Tailwind CSS
-- **Icons**: Lucide React
-- **State Management**: React Hooks
-
-## 🚀 Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
 - Node.js 18+ 
+- MongoDB (Atlas or local)
 - npm or yarn
 
 ### Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/agnesh02backup/ernakulam-dine-flow.git
-
-# Navigate to project directory
-cd ernakulam-dine-flow
-
-# Install dependencies
+# Install frontend dependencies
 npm install
 
-# Start development server
-npm run dev
+# Install backend dependencies
+cd server
+npm install
+cd ..
 ```
 
-### Available Scripts
+### Environment Setup
+
+Create a `.env.local` file in the root:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3000/api
+NEXT_PUBLIC_RAZORPAY_KEY_ID=your_razorpay_key_here
+```
+
+Create a `.env` file in the `server/` directory:
+```env
+DATABASE_URL=mongodb+srv://username:password@cluster.mongodb.net/ernakulam_dine_flow
+JWT_SECRET=your-super-secret-jwt-key
+RAZORPAY_KEY_ID=your_razorpay_key_here
+RAZORPAY_KEY_SECRET=your_razorpay_secret_here
+PORT=3000
+NODE_ENV=development
+```
+
+### Running the Application
 
 ```bash
-# Development server
-npm run dev
+# Run both frontend and backend together (recommended)
+npm run dev:full
 
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
-
-# Lint code
-npm run lint
+# Or run separately:
+npm run dev          # Frontend only (port 3000)
+npm run dev:server   # Backend only (port 3000)
 ```
 
-## 🌐 Deployment
+### Build for Production
 
-This project is automatically deployed to GitHub Pages using GitHub Actions. ✅ **Currently Live & Working**
+```bash
+# Build frontend
+npm run build
+npm start
 
-### Automatic Deployment
+# Build backend (runs in server/ directory)
+cd server
+npm start
+```
 
-Every push to the `main` branch triggers:
-1. **Build Process**: Installs dependencies and builds the React app
-2. **Deployment**: Automatically deploys to GitHub Pages
-3. **Live Site**: Updates at [https://agnesh02backup.github.io/ernakulam-dine-flow/](https://agnesh02backup.github.io/ernakulam-dine-flow/)
+## 🏗️ Tech Stack
 
-### Manual Deployment (if needed)
+### Frontend
+- **Framework**: Next.js 15 (App Router)
+- **UI Library**: React 18
+- **Styling**: Tailwind CSS
+- **Components**: shadcn/ui (Radix UI)
+- **State Management**: TanStack Query
+- **Real-time**: Socket.io Client
+- **Forms**: React Hook Form + Zod
+- **Payments**: Razorpay
 
-1. **Build the project locally**:
-   ```bash
-   npm run build
-   ```
+### Backend
+- **Runtime**: Node.js + Express
+- **Database**: MongoDB + Prisma ORM
+- **Authentication**: JWT
+- **Real-time**: Socket.io
+- **Payment Gateway**: Razorpay
 
-2. **GitHub Pages Settings**:
-   - Repository Settings → Pages
-   - Source: "Deploy from a branch"
-   - Branch: `gh-pages` / `/ (root)`
+## 📱 Features
 
-### Workflow Details
+### Customer Interface
+- Browse digital menu with images and descriptions
+- Real-time order status tracking
+- Multiple payment options (Cash, UPI, Card)
+- Multi-restaurant ordering support
+- Split payment functionality
+- Order history
 
-The deployment uses:
-- **GitHub Actions**: `.github/workflows/deploy.yml`
-- **Build Tool**: Vite
-- **Deploy Action**: `peaceiris/actions-gh-pages@v3`
-- **Permissions**: `contents: write` for branch creation
+### Staff Interface
+- PIN-based authentication
+- Real-time order management
+- Menu control (availability, pricing)
+- Order history and analytics
+- Multi-restaurant management
+- Table management (coming soon)
 
-## 📱 Responsive Design
+## 🛠️ Project Structure
 
-The application is fully responsive and works on:
-- 📱 Mobile devices (320px+)
-- 📱 Tablets (768px+)
-- 💻 Desktop (1024px+)
-- 🖥️ Large screens (1440px+)
+```
+ernakulam-dine-flow/
+├── app/                    # Next.js App Router
+│   ├── customer/          # Customer interface route
+│   ├── staff/             # Staff interface route
+│   ├── components/        # React components
+│   │   ├── customer/     # Customer UI components
+│   │   ├── staff/        # Staff UI components
+│   │   └── ui/           # shadcn/ui components
+│   ├── hooks/            # Custom React hooks
+│   ├── lib/              # Utilities
+│   │   ├── api.ts        # API client
+│   │   ├── socket.ts     # Socket.io client
+│   │   └── razorpay.ts   # Razorpay integration
+│   ├── layout.tsx         # Root layout
+│   ├── page.tsx           # Landing page
+│   └── providers.tsx      # Client-side providers
+│
+├── server/               # Backend API
+│   ├── prisma/          # Database schema & migrations
+│   ├── routes/          # API routes
+│   ├── services/        # Business logic
+│   └── middleware/      # Express middleware
+│
+└── public/              # Static assets
+```
 
-## 🎨 Design System
+## 📋 Available Scripts
 
-- **Color Scheme**: Professional teal and orange theme
-- **Typography**: Inter font family
-- **Components**: Consistent shadcn/ui components
-- **Animations**: Smooth transitions and hover effects
+```bash
+# Frontend
+npm run dev          # Start development server
+npm run build        # Build for production
+npm start            # Start production server
+npm run lint         # Run ESLint
 
-## 🤝 Contributing
+# Backend
+npm run dev:server   # Start backend dev server
+npm run server:install   # Install backend dependencies
+npm run server:setup     # Setup database
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+# Combined
+npm run dev:full     # Run frontend + backend together
+npm run setup        # Complete project setup
+```
+
+## 🔧 Configuration
+
+### Next.js Configuration
+See `next.config.js` for:
+- Webpack configuration (Socket.io support)
+- Build optimization
+- Custom settings
+
+### Database Setup
+```bash
+cd server
+npx prisma generate
+npx prisma db push
+npx prisma db seed  # Optional: Seed test data
+```
+
+## 🚀 Deployment
+
+### Frontend (Vercel/Netlify)
+1. Build: `npm run build`
+2. Deploy the `.next` output directory
+3. Set environment variables in hosting platform
+
+### Backend (Railway/Heroku/VPS)
+1. Push to Git repository
+2. Set environment variables
+3. Database connection string
+4. Deploy from `server/` directory
+
+## 🐛 Troubleshooting
+
+### Port Already in Use
+```bash
+# Kill process on port 3000 (Windows)
+npx kill-port 3000
+
+# Or change port in next.config.js and server/.env
+```
+
+### Database Connection Issues
+- Verify MongoDB connection string
+- Check network access in MongoDB Atlas
+- Ensure database user has proper permissions
+
+### Socket.io Not Connecting
+- Check CORS settings in `server/index.js`
+- Verify `NEXT_PUBLIC_API_URL` matches backend URL
+- Ensure both frontend and backend are running
 
 ## 📄 License
 
-This project is open source and available under the [MIT License](LICENSE).
+Private - All Rights Reserved
 
-## 👨‍💻 Author
+## 👥 Support
 
-**Agnesh Kumar**
-- GitHub: [@agnesh02backup](https://github.com/agnesh02backup)
+For issues and questions, please contact the development team.
 
-## 🙏 Acknowledgments
+---
 
-- UI components from [shadcn/ui](https://ui.shadcn.com)
-- Icons from [Lucide](https://lucide.dev)
+**Note**: This is a Next.js application. The migration from Vite to Next.js is complete and all features are functional.

@@ -1,0 +1,14 @@
+# Ignore backend server directory (deploy separately to Railway)
+server/
+
+# Ignore dev files
+*.log
+.env
+.env.local
+node_modules/
+.next/
+
+# Ignore development scripts
+start-dev.bat
+start-dev.ps1
+
