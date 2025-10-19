@@ -1,12 +1,5 @@
 {
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
-  "env": {
-    "NEXT_PUBLIC_API_URL": "@next_public_api_url",
-    "NEXT_PUBLIC_RAZORPAY_KEY_ID": "@next_public_razorpay_key_id"
-  }
+  "buildCommand": "npm run build",
+  "framework": "nextjs",
+  "installCommand": "npm install"
 }

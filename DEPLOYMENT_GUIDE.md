@@ -59,6 +59,8 @@ Railway needs to run from the `server/` folder:
 2. Under **"Root Directory"**, set: `server`
 3. Under **"Start Command"**, set: `npm start`
 
+**Important**: Railway may auto-detect Bun. If you see build errors, the `nixpacks.toml` file in the `server/` directory will force it to use npm instead.
+
 ### 2.3 Set Environment Variables in Railway
 In Railway **Settings → Variables**, add:
 
