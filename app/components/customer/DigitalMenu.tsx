@@ -33,7 +33,6 @@ import {
   Dessert,
   X,
   CreditCard,
-  Wallet,
   CheckCircle2,
   Loader2,
   Utensils,
@@ -204,7 +203,7 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced, selectedRestaurant, 
     setShowPaymentChoice(true);
   };
 
-  const placeOrderWithPaymentMethod = async (paymentChoice: 'prepay' | 'postpay') => {
+  const placeOrderWithPaymentMethod = async (paymentChoice: 'prepay') => {
     if (cart.length === 0) return;
 
     setIsPlacingOrder(true);
@@ -977,27 +976,6 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced, selectedRestaurant, 
                    <div className="flex items-center mt-1 text-xs text-green-600">
                      <CheckCircle2 className="h-3 w-3 mr-1" />
                      Recommended
-                   </div>
-                 </div>
-               </Button>
-
-               {/* Postpay Option */}
-               <Button
-                 onClick={() => placeOrderWithPaymentMethod('postpay')}
-                 className="w-full h-auto p-3 flex items-start space-x-3 hover:bg-accent hover:text-accent-foreground"
-                 variant="outline"
-               >
-                 <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
-                   <Wallet className="h-5 w-5 text-blue-600" />
-                 </div>
-                 <div className="flex-1 text-left">
-                   <h4 className="font-semibold text-sm mb-1">Pay Later (Cash/Card)</h4>
-                   <p className="text-xs text-muted-foreground">
-                     Pay after meal • Cash, Card, UPI accepted
-                   </p>
-                   <div className="flex items-center mt-1 text-xs text-blue-600">
-                     <CheckCircle2 className="h-3 w-3 mr-1" />
-                     Flexible
                    </div>
                  </div>
                </Button>

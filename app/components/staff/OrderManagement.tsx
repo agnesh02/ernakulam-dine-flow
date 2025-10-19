@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, memo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, CheckCircle, AlertTriangle, Users, X, Minus, Plus } from "lucide-react";
+import { Clock, CheckCircle, AlertTriangle, Users } from "lucide-react";
 import { orderAPI } from "@/lib/api";
 import { getSocket, joinStaffRoom, onNewOrder, onOrderStatusUpdate, onOrderPaid } from "@/lib/socket";
 import { useToast } from "@/hooks/use-toast";
@@ -97,7 +97,7 @@ export const OrderManagement = () => {
     fetchOrders();
     
     // Set up Socket.io for real-time updates with restaurant context
-    const socket = getSocket();
+    getSocket();
     const staffInfo = typeof window !== 'undefined' ? localStorage.getItem('staffInfo') : null;
     const restaurantId = staffInfo ? JSON.parse(staffInfo).restaurantId : null;
     joinStaffRoom(restaurantId);
@@ -120,7 +120,7 @@ export const OrderManagement = () => {
           audio.play().catch(() => {
             // Ignore audio play errors
           });
-        } catch (e) {
+        } catch {
           // Ignore audio errors
         }
       }
@@ -224,119 +224,8 @@ export const OrderManagement = () => {
     }
   };
 
-  const increaseItemQuantity = async (orderId: string, itemId: string, itemName: string, currentQuantity: number) => {
-    if (updatingOrderId === orderId) return; // Prevent updating the same order multiple times
-    
-    setUpdatingOrderId(orderId);
 
-    try {
-      const newQuantity = currentQuantity + 1;
 
-      const result = await orderAPI.updateItemQuantity(orderId, itemId, newQuantity);
-      
-      // Update the order in state
-      setOrders(orders.map(order => 
-        order.id === orderId ? result.order : order
-      ));
-      
-      toast({
-        title: "Quantity Updated",
-        description: `${itemName} quantity increased to ${newQuantity}`,
-      });
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Failed to update quantity";
-      toast({
-        title: "Error",
-        description: message,
-        variant: "destructive",
-      });
-    } finally {
-      setUpdatingOrderId(null);
-    }
-  };
-
-  const reduceItemQuantity = async (orderId: string, itemId: string, itemName: string, currentQuantity: number) => {
-    if (updatingOrderId === orderId) return; // Prevent updating the same order multiple times
-    
-    setUpdatingOrderId(orderId);
-
-    try {
-      const newQuantity = currentQuantity - 1;
-      
-      if (newQuantity === 0) {
-        // If reducing to 0, remove the item instead
-        setUpdatingOrderId(null); // Clear before calling removeOrderItem
-        await removeOrderItem(orderId, itemId, itemName);
-        return;
-      }
-
-      const result = await orderAPI.updateItemQuantity(orderId, itemId, newQuantity);
-      
-      // Update the order in state
-      setOrders(orders.map(order => 
-        order.id === orderId ? result.order : order
-      ));
-      
-      toast({
-        title: "Quantity Updated",
-        description: `${itemName} quantity reduced to ${newQuantity}`,
-      });
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Failed to update quantity";
-      toast({
-        title: "Error",
-        description: message,
-        variant: "destructive",
-      });
-    } finally {
-      setUpdatingOrderId(null);
-    }
-  };
-
-  const removeOrderItem = async (orderId: string, itemId: string, itemName: string) => {
-    if (updatingOrderId === orderId) return; // Prevent updating the same order multiple times
-    
-    // Confirm removal
-    if (!confirm(`Remove "${itemName}" from this order?`)) {
-      return;
-    }
-
-    setUpdatingOrderId(orderId);
-
-    try {
-      const result = await orderAPI.removeOrderItem(orderId, itemId);
-      
-      // Update the order in state
-      if (result.order.status === 'cancelled') {
-        // Order was cancelled because last item was removed
-        setOrders(orders.map(order => 
-          order.id === orderId ? result.order : order
-        ));
-        toast({
-          title: "Order Cancelled",
-          description: "Last item removed. Order has been cancelled.",
-        });
-      } else {
-        // Update order with new totals
-        setOrders(orders.map(order => 
-          order.id === orderId ? result.order : order
-        ));
-        toast({
-          title: "Item Removed",
-          description: `"${itemName}" has been removed from the order`,
-        });
-      }
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Failed to remove item";
-      toast({
-        title: "Error",
-        description: message,
-        variant: "destructive",
-      });
-    } finally {
-      setUpdatingOrderId(null);
-    }
-  };
 
   const getStatusSummary = () => {
     return orders.reduce(
@@ -518,42 +407,7 @@ export const OrderManagement = () => {
                                 <p className="text-sm text-muted-foreground mt-0.5">{item.notes}</p>
                               )}
                             </div>
-                            {(order.status === "pending" || order.status === "paid") && (
-                              <div className="flex items-center gap-1 flex-shrink-0 -mt-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => increaseItemQuantity(order.id, item.id, item.menuItem.name, item.quantity)}
-                                  disabled={updatingOrderId === order.id}
-                                  className="h-8 w-8 p-0 hover:bg-green-100 hover:text-green-600 transition-colors duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
-                                  title="Increase quantity by 1"
-                                >
-                                  <Plus className="h-4 w-4" />
-                                </Button>
-                                {item.quantity > 1 && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => reduceItemQuantity(order.id, item.id, item.menuItem.name, item.quantity)}
-                                    disabled={updatingOrderId === order.id}
-                                    className="h-8 w-8 p-0 hover:bg-orange-100 hover:text-orange-600 transition-colors duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
-                                    title="Reduce quantity by 1"
-                                  >
-                                    <Minus className="h-4 w-4" />
-                                  </Button>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeOrderItem(order.id, item.id, item.menuItem.name)}
-                                  disabled={updatingOrderId === order.id}
-                                  className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600 transition-colors duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
-                                  title="Remove item completely"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            )}
+                            {/* Removed individual item quantity controls - restaurants only see cancel order option */}
                           </div>
                         ))}
                       </div>
