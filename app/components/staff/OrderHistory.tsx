@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, CheckCircle, XCircle, History } from "lucide-react";
+import { Clock, CheckCircle, XCircle, History, RefreshCw } from "lucide-react";
 import { orderAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
@@ -18,15 +18,25 @@ interface Order {
   paymentStatus: string;
   paymentMethod?: string;
   createdAt: string;
+  updatedAt: string;
   orderItems: Array<{
     id: string;
     quantity: number;
     price: number;
+    notes?: string;
     menuItem: {
+      id: string;
       name: string;
       category: string;
+      prepTime: number;
     };
   }>;
+  restaurant?: {
+    id: string;
+    name: string;
+    cuisine: string;
+    image?: string;
+  };
 }
 
 export const OrderHistory = () => {
@@ -35,16 +45,15 @@ export const OrderHistory = () => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'served' | 'cancelled'>('all');
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchOrderHistory();
-  }, []);
-
-  const fetchOrderHistory = async () => {
+  const fetchOrderHistory = useCallback(async () => {
     try {
       setIsLoading(true);
+      console.log('Fetching order history...');
       const fetchedOrders = await orderAPI.getAll();
-      setOrders(fetchedOrders);
+      console.log('Fetched orders:', fetchedOrders);
+      setOrders(fetchedOrders || []);
     } catch (error: any) {
+      console.error('Error fetching order history:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to fetch order history",
@@ -53,7 +62,11 @@ export const OrderHistory = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchOrderHistory();
+  }, [fetchOrderHistory]);
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -69,23 +82,30 @@ export const OrderHistory = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    return orders.filter(order => {
+    const todayOrders = orders.filter(order => {
       const orderDate = new Date(order.createdAt);
       orderDate.setHours(0, 0, 0, 0);
       return orderDate.getTime() === today.getTime();
     });
+    
+    console.log('Today orders:', todayOrders.length, 'out of', orders.length, 'total orders');
+    return todayOrders;
   };
 
   const getFilteredOrders = () => {
     const todayOrders = getTodayOrders();
     
+    let filtered;
     if (filterStatus === 'all') {
-      return todayOrders.filter(order => 
+      filtered = todayOrders.filter(order => 
         order.status === 'served' || order.status === 'cancelled'
       );
+    } else {
+      filtered = todayOrders.filter(order => order.status === filterStatus);
     }
     
-    return todayOrders.filter(order => order.status === filterStatus);
+    console.log('Filtered orders:', filtered.length, 'for status:', filterStatus);
+    return filtered;
   };
 
   const filteredOrders = getFilteredOrders();
@@ -135,6 +155,21 @@ export const OrderHistory = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header with Refresh Button */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Order History</h2>
+        <Button
+          onClick={fetchOrderHistory}
+          disabled={isLoading}
+          variant="outline"
+          size="sm"
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </div>
+
       {/* Today's Stats */}
       <div className="grid grid-cols-3 gap-4">
         <Card className="restaurant-card">
@@ -156,6 +191,20 @@ export const OrderHistory = () => {
           </div>
         </Card>
       </div>
+
+      {/* Debug Info (only in development) */}
+      {process.env.NODE_ENV === 'development' && (
+        <Card className="restaurant-card bg-gray-50">
+          <div className="text-sm text-gray-600">
+            <p><strong>Debug Info:</strong></p>
+            <p>Total orders fetched: {orders.length}</p>
+            <p>Today&apos;s orders: {getTodayOrders().length}</p>
+            <p>Filtered orders: {filteredOrders.length}</p>
+            <p>Current filter: {filterStatus}</p>
+            <p>Loading: {isLoading ? 'Yes' : 'No'}</p>
+          </div>
+        </Card>
+      )}
 
       {/* Filter Buttons */}
       <div className="flex flex-wrap gap-2">
@@ -192,11 +241,20 @@ export const OrderHistory = () => {
         <Card className="restaurant-card text-center py-12">
           <History className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">No Orders Found</h3>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mb-4">
             {filterStatus === 'all' 
               ? 'No completed orders yet today' 
               : `No ${filterStatus} orders today`}
           </p>
+          <Button 
+            onClick={fetchOrderHistory} 
+            variant="outline" 
+            size="sm"
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh Data
+          </Button>
         </Card>
       ) : (
         <div className="grid gap-4">

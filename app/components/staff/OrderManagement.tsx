@@ -238,7 +238,18 @@ export const OrderManagement = () => {
   };
 
   const statusSummary = getStatusSummary();
-  const activeOrders = orders.filter(order => order.status !== "served");
+  const activeOrders = orders.filter(order => 
+    order.status !== "served" && order.status !== "cancelled"
+  );
+
+  // Debug logging for active orders
+  console.log('Order Management Debug:', {
+    totalOrders: orders.length,
+    activeOrders: activeOrders.length,
+    servedOrders: orders.filter(o => o.status === 'served').length,
+    cancelledOrders: orders.filter(o => o.status === 'cancelled').length,
+    orderStatuses: orders.map(o => ({ id: o.id, status: o.status, orderNumber: o.orderNumber }))
+  });
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -333,7 +344,7 @@ export const OrderManagement = () => {
           <Card className="restaurant-card text-center py-16 bg-gradient-to-br from-gray-50 to-gray-100">
             <CheckCircle className="h-20 w-20 text-green-500 mx-auto mb-6" />
             <h3 className="text-xl font-bold mb-3">No Active Orders</h3>
-            <p className="text-muted-foreground text-lg">All orders have been served</p>
+            <p className="text-muted-foreground text-lg">All orders have been served or cancelled</p>
           </Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
