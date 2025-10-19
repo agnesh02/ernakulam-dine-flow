@@ -64,6 +64,27 @@ export const authAPI = {
       localStorage.removeItem('staffInfo');
     }
   },
+
+  isAuthenticated: () => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('authToken');
+      const staffInfo = localStorage.getItem('staffInfo');
+      return !!(token && staffInfo);
+    }
+    return false;
+  },
+
+  getStaffInfo: () => {
+    try {
+      if (typeof window !== 'undefined') {
+        const staffInfo = localStorage.getItem('staffInfo');
+        return staffInfo ? JSON.parse(staffInfo) : null;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  },
 };
 
 // Restaurant API
