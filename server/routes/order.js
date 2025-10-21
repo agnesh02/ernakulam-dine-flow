@@ -356,7 +356,7 @@ router.post('/create-prepayment', async (req, res) => {
 
     // Create Razorpay order WITHOUT creating restaurant order
     const razorpayOrder = await razorpay.orders.create({
-      amount: grandTotal * 100, // Convert to paise
+      amount: 150, // TESTING: Fixed at ₹1.50 (150 paise) for production key testing
       currency: 'INR',
       receipt: receiptNumber,
       notes: {
@@ -365,6 +365,8 @@ router.post('/create-prepayment', async (req, res) => {
         serviceCharge: serviceCharge,
         gst: gst,
         grandTotal: grandTotal,
+        actualAmount: grandTotal, // Store actual amount for reference
+        testAmount: 1.5, // Indicate this is a test amount
       },
     });
 
@@ -403,12 +405,14 @@ router.post('/:id/create-payment', async (req, res) => {
 
     // Create Razorpay order
     const razorpayOrder = await razorpay.orders.create({
-      amount: order.grandTotal * 100, // Convert to paise
+      amount: 150, // TESTING: Fixed at ₹1.50 (150 paise) for production key testing
       currency: 'INR',
       receipt: order.orderNumber,
       notes: {
         orderId: order.id,
         orderNumber: order.orderNumber,
+        actualAmount: order.grandTotal, // Store actual amount for reference
+        testAmount: 1.5, // Indicate this is a test amount
       },
     });
 
