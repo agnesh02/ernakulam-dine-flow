@@ -248,9 +248,7 @@ export const DigitalMenu = ({ cart, setCart, onOrderPlaced, selectedRestaurant, 
               description: `Order Total: ₹${paymentData.amount}`,
               order_id: paymentData.razorpayOrderId,
               prefill: {
-                name: 'Customer',
-                email: 'customer@example.com',
-                contact: '9999999999',
+                // Customer will enter their own details
               },
               theme: {
                 color: '#f97316',
