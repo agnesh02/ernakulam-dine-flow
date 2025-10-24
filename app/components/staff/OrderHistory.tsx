@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Clock, CheckCircle, XCircle, History, RefreshCw } from "lucide-react";
-import { orderAPI } from "@/lib/api";
+import { orderAPI, authAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
 interface Order {
@@ -45,11 +45,26 @@ export const OrderHistory = () => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'served' | 'cancelled'>('all');
   const { toast } = useToast();
 
+  // Get restaurant ID from staff info
+  const staffInfo = authAPI.getStaffInfo();
+  const restaurantId = staffInfo?.restaurantId;
+
   const fetchOrderHistory = useCallback(async () => {
+    if (!restaurantId) {
+      toast({
+        title: "Error",
+        description: "Unable to determine your restaurant. Please log in again.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
-      console.log('Fetching order history...');
-      const fetchedOrders = await orderAPI.getAll();
+      console.log('Fetching order history for restaurant:', restaurantId);
+      // Fetch only orders for this restaurant
+      const fetchedOrders = await orderAPI.getAll(undefined, restaurantId);
       console.log('Fetched orders:', fetchedOrders);
       setOrders(fetchedOrders || []);
     } catch (error: any) {
@@ -62,7 +77,7 @@ export const OrderHistory = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, restaurantId]);
 
   useEffect(() => {
     fetchOrderHistory();

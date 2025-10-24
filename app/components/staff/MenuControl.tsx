@@ -16,7 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Search, ChefHat, Coffee, Salad, Dessert, Clock, Plus, Trash2, Edit } from "lucide-react";
-import { menuAPI } from "@/lib/api";
+import { menuAPI, authAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
 interface MenuItem {
@@ -62,6 +62,7 @@ export const MenuControl = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const { toast } = useToast();
+  const [restaurantId, setRestaurantId] = useState<string | null>(null);
 
   // Form state for adding new menu item
   const [newItem, setNewItem] = useState({
@@ -142,15 +143,34 @@ export const MenuControl = () => {
     return errors;
   };
 
-  // Fetch menu items on mount
+  // Get restaurant ID from staff info on mount
   useEffect(() => {
-    fetchMenuItems();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    const staffInfo = authAPI.getStaffInfo();
+    if (staffInfo && staffInfo.restaurantId) {
+      setRestaurantId(staffInfo.restaurantId);
+    } else {
+      toast({
+        title: "Error",
+        description: "Unable to determine your restaurant. Please log in again.",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
+  // Fetch menu items when restaurantId is available
+  useEffect(() => {
+    if (restaurantId) {
+      fetchMenuItems();
+    }
+  }, [restaurantId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchMenuItems = async () => {
+    if (!restaurantId) return;
+    
     try {
       setIsLoading(true);
-      const items = await menuAPI.getAll();
+      // Fetch only menu items for this restaurant
+      const items = await menuAPI.getAll(false, restaurantId);
       setMenuItems(items);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Failed to fetch menu items";

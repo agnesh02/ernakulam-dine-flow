@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, CheckCircle, AlertTriangle, Users } from "lucide-react";
-import { orderAPI } from "@/lib/api";
+import { orderAPI, authAPI } from "@/lib/api";
 import { getSocket, joinStaffRoom, onNewOrder, onOrderStatusUpdate, onOrderPaid } from "@/lib/socket";
 import { useToast } from "@/hooks/use-toast";
 
@@ -75,10 +75,25 @@ export const OrderManagement = () => {
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // Get restaurant ID from staff info
+  const staffInfo = authAPI.getStaffInfo();
+  const restaurantId = staffInfo?.restaurantId;
+
   const fetchOrders = useCallback(async () => {
+    if (!restaurantId) {
+      toast({
+        title: "Error",
+        description: "Unable to determine your restaurant. Please log in again.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
-      const fetchedOrders = await orderAPI.getAll();
+      // Fetch only orders for this restaurant
+      const fetchedOrders = await orderAPI.getAll(undefined, restaurantId);
       setOrders(fetchedOrders);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Failed to fetch orders";
@@ -90,7 +105,7 @@ export const OrderManagement = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, restaurantId]);
 
   // Fetch orders and set up Socket.io
   useEffect(() => {
